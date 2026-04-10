@@ -1,0 +1,215 @@
+type UserUpdateInput = 
+ record {
+   city: text;
+   email: text;
+   name: text;
+   phone: text;
+   role: opt Role;
+   state: text;
+ };
+type UserInput = 
+ record {
+   city: text;
+   email: text;
+   name: text;
+   phone: text;
+   state: text;
+ };
+type UserId = principal;
+type User = 
+ record {
+   city: text;
+   createdAt: Timestamp;
+   email: text;
+   id: UserId;
+   name: text;
+   phone: text;
+   role: Role;
+   state: text;
+ };
+type Timestamp = int;
+type ServiceOffered = 
+ record {
+   availability: text;
+   description: text;
+   price: opt text;
+   serviceId: nat;
+   title: text;
+ };
+type Role = 
+ variant {
+   admin;
+   provider;
+   seeker;
+ };
+type ReviewInput = 
+ record {
+   comment: text;
+   providerId: ProviderId;
+   rating: nat;
+ };
+type ReviewId = nat;
+type Review = 
+ record {
+   comment: text;
+   createdAt: Timestamp;
+   id: ReviewId;
+   providerId: ProviderId;
+   rating: nat;
+   seekerId: UserId;
+ };
+type ProviderSummary = 
+ record {
+   averageRating: float64;
+   businessName: text;
+   categoryIds: vec CategoryId;
+   city: text;
+   id: ProviderId;
+   isActive: bool;
+   isVerified: bool;
+   ownerName: text;
+   profileImage: opt text;
+   reviewCount: nat;
+   state: text;
+   userId: UserId;
+ };
+type ProviderInput = 
+ record {
+   address: text;
+   bioEn: text;
+   bioHi: text;
+   businessName: text;
+   categoryIds: vec CategoryId;
+   city: text;
+   email: text;
+   ownerName: text;
+   phone: text;
+   profileImage: opt text;
+   serviceAreas: vec text;
+   servicesOffered: vec ServiceOffered;
+   state: text;
+ };
+type ProviderId = nat;
+type ProviderFilter = 
+ record {
+   categoryId: opt CategoryId;
+   city: opt text;
+   state: opt text;
+ };
+type Provider = 
+ record {
+   address: text;
+   bioEn: text;
+   bioHi: text;
+   businessName: text;
+   categoryIds: vec CategoryId;
+   city: text;
+   createdAt: Timestamp;
+   email: text;
+   id: ProviderId;
+   isActive: bool;
+   isVerified: bool;
+   ownerName: text;
+   phone: text;
+   profileImage: opt text;
+   serviceAreas: vec text;
+   servicesOffered: vec ServiceOffered;
+   state: text;
+   userId: UserId;
+ };
+type Page = 
+ record {
+   items: vec ProviderSummary;
+   page: nat;
+   pageSize: nat;
+   total: nat;
+ };
+type InquiryStatus = 
+ variant {
+   closed;
+   pending;
+   responded;
+ };
+type InquiryInput = 
+ record {
+   message: text;
+   preferredContact: text;
+   providerId: ProviderId;
+   serviceName: text;
+ };
+type InquiryId = nat;
+type Inquiry = 
+ record {
+   createdAt: Timestamp;
+   id: InquiryId;
+   message: text;
+   preferredContact: text;
+   providerId: ProviderId;
+   seekerId: UserId;
+   serviceName: text;
+   status: InquiryStatus;
+ };
+type CategoryInput = 
+ record {
+   color: text;
+   description: BilingualText;
+   displayOrder: nat;
+   icon: text;
+   name: BilingualText;
+ };
+type CategoryId = nat;
+type Category = 
+ record {
+   color: text;
+   description: BilingualText;
+   displayOrder: nat;
+   icon: text;
+   id: CategoryId;
+   isActive: bool;
+   name: BilingualText;
+ };
+type BilingualText = 
+ record {
+   en: text;
+   hi: text;
+ };
+type AdminStats = 
+ record {
+   totalCategories: nat;
+   totalInquiries: nat;
+   totalProviders: nat;
+   totalSeekers: nat;
+ };
+service : {
+  addReview: (input: ReviewInput) -> (Review);
+  approveProvider: (id: ProviderId) -> (bool);
+  createCategory: (input: CategoryInput) -> (Category);
+  createProviderProfile: (input: ProviderInput) -> (Provider);
+  deleteCategory: (id: CategoryId) -> (bool);
+  disableProvider: (id: ProviderId) -> (bool);
+  getAdminStats: () -> (AdminStats) query;
+  getCategory: (id: CategoryId) -> (opt Category) query;
+  getInquiriesByProvider: (providerId: ProviderId) -> (vec Inquiry) query;
+  getMyInquiries: () -> (vec Inquiry) query;
+  getMyProfile: () -> (opt User) query;
+  getMyProviderProfile: () -> (opt Provider) query;
+  getMyReviews: () -> (vec Review) query;
+  getProvider: (id: ProviderId) -> (opt Provider) query;
+  getReviewsByProvider: (providerId: ProviderId) -> (vec Review) query;
+  listAllCategories: () -> (vec Category) query;
+  listCategories: () -> (vec Category) query;
+  listProviders: (filter: ProviderFilter, page: nat, pageSize: nat) ->
+   (Page) query;
+  listUsers: () -> (vec User) query;
+  registerUser: (input: UserInput) -> (User);
+  seedSampleData: () -> (bool);
+  setCategoryActive: (id: CategoryId, isActive: bool) -> (bool);
+  setUserRole: (userId: UserId, role: Role) -> (bool);
+  submitInquiry: (input: InquiryInput) -> (Inquiry);
+  updateCategory: (id: CategoryId, input: CategoryInput) -> (opt Category);
+  updateInquiryStatus: (id: InquiryId, status: InquiryStatus) ->
+   (opt Inquiry);
+  updateProviderProfile: (id: ProviderId, input: ProviderInput) ->
+   (opt Provider);
+  updateUserProfile: (input: UserUpdateInput) -> (opt User);
+}

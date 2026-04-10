@@ -1,0 +1,25 @@
+{
+  "overview": "India Help Services is a fully responsive SaaS platform connecting Indians with service providers across Government, Legal, Medical, Financial, Education, Home, Tech, Travel, and Business sectors. Features bilingual (Hindi/English) support, service discovery with search and filters, provider profiles with ratings and reviews, user accounts for both seekers and providers, and an admin panel for full platform management.",
+  "features": [
+    "Homepage with hero section and service category grid",
+    "Service listings with search and filter by category, location, and type",
+    "Service provider profiles with ratings and reviews",
+    "User authentication for seekers and providers with Internet Identity",
+    "Admin panel to manage categories, listings, and users",
+    "Contact and inquiry forms with email notifications",
+    "Hindi and English bilingual support with language toggle",
+    "Indian color theme (saffron, white, green) with fully responsive layout"
+  ],
+  "category": "marketplace",
+  "tags": [
+    "india",
+    "services",
+    "marketplace",
+    "bilingual",
+    "admin-panel",
+    "responsive",
+    "saas",
+    "directory"
+  ],
+  "last_updated": "2026-04-09T19:41:14.480Z"
+}

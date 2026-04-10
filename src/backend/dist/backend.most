@@ -1,0 +1,122 @@
+// Version: 1.0.0
+type BilingualText__241618445 = {en : Text; hi : Text};
+type CategoryId__14729845 = Nat;
+type Category__349932887 =
+  {
+    color : Text;
+    description : BilingualText__241618445;
+    displayOrder : Nat;
+    icon : Text;
+    id : CategoryId__14729845;
+    isActive : Bool;
+    name : BilingualText__241618445
+  };
+type InquiryId__340326671 = Nat;
+type InquiryStatus__14405731 = {#closed; #pending; #responded};
+type Inquiry__159127206 =
+  {
+    createdAt : Timestamp__301639476;
+    id : InquiryId__340326671;
+    message : Text;
+    preferredContact : Text;
+    providerId : ProviderId__856479461;
+    seekerId : UserId__158757552;
+    serviceName : Text;
+    status : InquiryStatus__14405731
+  };
+type Int__270357528 = Int__616954475;
+type Int__616954475 = Int;
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type ProviderId__856479461 = Nat;
+type Provider__436650321 =
+  {
+    address : Text;
+    bioEn : Text;
+    bioHi : Text;
+    businessName : Text;
+    categoryIds : [CategoryId__14729845];
+    city : Text;
+    createdAt : Timestamp__301639476;
+    email : Text;
+    id : ProviderId__856479461;
+    isActive : Bool;
+    isVerified : Bool;
+    ownerName : Text;
+    phone : Text;
+    profileImage : ?Text;
+    serviceAreas : [Text];
+    servicesOffered : [ServiceOffered__892929233];
+    state : Text;
+    userId : UserId__158757552
+  };
+type ReviewId__496285678 = Nat;
+type Review__513345496 =
+  {
+    comment : Text;
+    createdAt : Timestamp__301639476;
+    id : ReviewId__496285678;
+    providerId : ProviderId__856479461;
+    rating : Nat;
+    seekerId : UserId__158757552
+  };
+type Role__300349085 = {#admin; #provider; #seeker};
+type ServiceOffered__892929233 =
+  {
+    availability : Text;
+    description : Text;
+    price : ?Text;
+    serviceId : Nat;
+    title : Text
+  };
+type Time__796480547 = Int__270357528;
+type Time__900049286 = Time__796480547;
+type Timestamp__301639476 = Time__900049286;
+type UserId__158757552 = Principal;
+type User__98118558 =
+  {
+    city : Text;
+    createdAt : Timestamp__301639476;
+    email : Text;
+    id : UserId__158757552;
+    name : Text;
+    phone : Text;
+    role : Role__300349085;
+    state : Text
+  };
+actor {
+  stable categories :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Category__349932887]];
+      var elementIndex : Nat__490723111
+    };
+  stable inquiries :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Inquiry__159127206]];
+      var elementIndex : Nat__490723111
+    };
+  stable nextCategoryId : {var value : Nat};
+  stable nextInquiryId : {var value : Nat};
+  stable nextProviderId : {var value : Nat};
+  stable nextReviewId : {var value : Nat};
+  stable providers :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Provider__436650321]];
+      var elementIndex : Nat__490723111
+    };
+  stable reviews :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Review__513345496]];
+      var elementIndex : Nat__490723111
+    };
+  stable users :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?User__98118558]];
+      var elementIndex : Nat__490723111
+    }
+};
