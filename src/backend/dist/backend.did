@@ -73,14 +73,26 @@ type ProviderSummary =
    state: text;
    userId: UserId;
  };
+type ProviderSearchFilter = 
+ record {
+   categoryId: opt CategoryId;
+   city: opt text;
+   isVerified: opt bool;
+   minRating: opt float64;
+   searchQuery: opt text;
+   state: opt text;
+ };
 type ProviderInput = 
  record {
    address: text;
+   availableFrom: opt text;
+   availableTo: opt text;
    bioEn: text;
    bioHi: text;
    businessName: text;
    categoryIds: vec CategoryId;
    city: text;
+   contactAvailabilityEnabled: opt bool;
    email: text;
    ownerName: text;
    phone: text;
@@ -99,11 +111,14 @@ type ProviderFilter =
 type Provider = 
  record {
    address: text;
+   availableFrom: opt text;
+   availableTo: opt text;
    bioEn: text;
    bioHi: text;
    businessName: text;
    categoryIds: vec CategoryId;
    city: text;
+   contactAvailabilityEnabled: opt bool;
    createdAt: Timestamp;
    email: text;
    id: ProviderId;
@@ -123,6 +138,33 @@ type Page =
    page: nat;
    pageSize: nat;
    total: nat;
+ };
+type OpenUserRecord = 
+ record {
+   city: text;
+   createdAt: Timestamp;
+   email: text;
+   id: nat;
+   name: text;
+   phone: text;
+   role: Role;
+   serviceCategory: text;
+   state: text;
+ };
+type OpenUserInput = 
+ record {
+   city: text;
+   email: text;
+   name: text;
+   phone: text;
+   role: Role;
+   serviceCategory: text;
+   state: text;
+ };
+type OpenRegisterResult = 
+ variant {
+   err: text;
+   ok: OpenUserRecord;
  };
 type InquiryStatus = 
  variant {
@@ -148,6 +190,31 @@ type Inquiry =
    seekerId: UserId;
    serviceName: text;
    status: InquiryStatus;
+ };
+type ClassVideoInput = 
+ record {
+   description: text;
+   fileKey: text;
+   subCategory: ClassSubCategory;
+   title: text;
+ };
+type ClassVideo = 
+ record {
+   description: text;
+   fileKey: text;
+   id: nat;
+   isActive: bool;
+   providerId: ProviderId;
+   subCategory: ClassSubCategory;
+   title: text;
+   uploadedAt: int;
+ };
+type ClassSubCategory = 
+ variant {
+   coaching;
+   dhyan;
+   fitness;
+   yoga;
  };
 type CategoryInput = 
  record {
@@ -175,37 +242,70 @@ type BilingualText =
  };
 type AdminStats = 
  record {
+   avgPlatformRating: float64;
+   pendingProviderApprovals: nat;
    totalCategories: nat;
    totalInquiries: nat;
    totalProviders: nat;
+   totalReviews: nat;
    totalSeekers: nat;
  };
 service : {
+  addClassVideo: (providerId: ProviderId, input: ClassVideoInput) ->
+   (ClassVideo);
   addReview: (input: ReviewInput) -> (Review);
   approveProvider: (id: ProviderId) -> (bool);
+  checkContactAvailable: (providerId: ProviderId, currentHHMM: text) ->
+   (bool) query;
   createCategory: (input: CategoryInput) -> (Category);
   createProviderProfile: (input: ProviderInput) -> (Provider);
   deleteCategory: (id: CategoryId) -> (bool);
+  deleteClassVideo: (videoId: nat, providerId: ProviderId) -> (bool);
   disableProvider: (id: ProviderId) -> (bool);
   getAdminStats: () -> (AdminStats) query;
   getCategory: (id: CategoryId) -> (opt Category) query;
+  getClassVideoById: (videoId: nat) -> (opt ClassVideo) query;
+  getClassVideosByProvider: (providerId: ProviderId) ->
+   (vec ClassVideo) query;
+  getClassVideosBySubCategory: (subCategory: ClassSubCategory) ->
+   (vec ClassVideo) query;
+  getFeaturedProviders: () -> (vec ProviderSummary) query;
   getInquiriesByProvider: (providerId: ProviderId) -> (vec Inquiry) query;
+  getMyClassVideos: (providerId: ProviderId) -> (vec ClassVideo) query;
   getMyInquiries: () -> (vec Inquiry) query;
   getMyProfile: () -> (opt User) query;
   getMyProviderProfile: () -> (opt Provider) query;
   getMyReviews: () -> (vec Review) query;
+  getOpenUserCount: () -> (nat) query;
   getProvider: (id: ProviderId) -> (opt Provider) query;
+  getProvidersByCategory: (categoryId: CategoryId, page: nat, pageSize:
+   nat) -> (Page) query;
   getReviewsByProvider: (providerId: ProviderId) -> (vec Review) query;
+  getVisitorStats: () ->
+   (record {
+      totalVisits: nat;
+      uniqueVisitors: nat;
+    }) query;
   listAllCategories: () -> (vec Category) query;
   listCategories: () -> (vec Category) query;
   listProviders: (filter: ProviderFilter, page: nat, pageSize: nat) ->
    (Page) query;
   listUsers: () -> (vec User) query;
+  openRegisterUser: (input: OpenUserInput) -> (OpenRegisterResult);
   registerUser: (input: UserInput) -> (User);
+  searchProviders: (filter: ProviderSearchFilter, page: nat, pageSize:
+   nat) -> (Page) query;
   seedSampleData: () -> (bool);
   setCategoryActive: (id: CategoryId, isActive: bool) -> (bool);
   setUserRole: (userId: UserId, role: Role) -> (bool);
   submitInquiry: (input: InquiryInput) -> (Inquiry);
+  toggleClassVideoActive: (videoId: nat, providerId: ProviderId) ->
+   (opt ClassVideo);
+  trackVisit: (visitorId: text) ->
+   (record {
+      totalVisits: nat;
+      uniqueVisitors: nat;
+    });
   updateCategory: (id: CategoryId, input: CategoryInput) -> (opt Category);
   updateInquiryStatus: (id: InquiryId, status: InquiryStatus) ->
    (opt Inquiry);

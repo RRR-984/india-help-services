@@ -13,7 +13,7 @@ interface MobileNavProps {
 }
 
 export default function MobileNav({ open, onClose, navLinks }: MobileNavProps) {
-  const { t } = useLanguage();
+  const { t, lang, setLang } = useLanguage();
   const { isAuthenticated, user, login, logout } = useAuth();
   const router = useRouter();
   const currentPath = router.state.location.pathname;
@@ -62,15 +62,18 @@ export default function MobileNav({ open, onClose, navLinks }: MobileNavProps) {
           if (e.key === "Enter") onClose();
         }}
         role="presentation"
+        aria-hidden="true"
       />
 
       {/* Drawer panel */}
-      <div
-        className="fixed inset-y-0 right-0 z-50 w-72 bg-card shadow-elevated flex flex-col md:hidden"
+      <dialog
+        open
+        className="fixed inset-y-0 right-0 z-50 w-72 bg-card shadow-elevated flex flex-col md:hidden m-0 p-0 border-0 h-full max-h-none"
+        aria-label="Mobile navigation menu"
         data-ocid="mobile-nav"
       >
         {/* Tricolor strip */}
-        <div className="h-1 w-full flex">
+        <div className="h-1 w-full flex" aria-hidden="true">
           <div className="flex-1 bg-primary" />
           <div className="flex-1 bg-background border-y border-border" />
           <div className="flex-1 bg-secondary" />
@@ -78,30 +81,65 @@ export default function MobileNav({ open, onClose, navLinks }: MobileNavProps) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-border">
-          <div className="flex items-center gap-1">
-            <span className="text-primary font-display font-bold text-lg">
-              India
+          <div className="flex items-center gap-2">
+            <span className="text-xl" role="img" aria-label="Indian flag">
+              🇮🇳
             </span>
-            <span className="text-secondary font-display font-bold text-lg">
-              Help
-            </span>
-            <span className="text-foreground font-display font-semibold text-lg">
-              Services
-            </span>
+            <div>
+              <span className="text-primary font-display font-bold text-base">
+                India
+              </span>
+              <span className="text-secondary font-display font-bold text-base">
+                {" "}
+                Help
+              </span>
+            </div>
           </div>
           <button
             onClick={onClose}
             type="button"
-            className="flex items-center justify-center w-11 h-11 rounded-md text-foreground hover:bg-muted"
+            className="flex items-center justify-center w-11 h-11 rounded-md text-foreground hover:bg-muted transition-colors"
             aria-label="Close menu"
           >
             <X size={20} />
           </button>
         </div>
 
+        {/* Language toggle */}
+        <div className="px-4 py-3 border-b border-border">
+          <button
+            type="button"
+            onClick={() => setLang(lang === "en" ? "hi" : "en")}
+            className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+            aria-label="Toggle language"
+            data-ocid="mobile-lang-toggle"
+          >
+            <span className="text-xs text-muted-foreground font-medium">
+              Language / भाषा
+            </span>
+            <div className="flex items-center gap-2 text-xs font-semibold">
+              <span
+                className={
+                  lang === "en"
+                    ? "text-primary font-bold"
+                    : "text-muted-foreground"
+                }
+              >
+                EN
+              </span>
+              <span className="text-border/60">|</span>
+              <span
+                className={`text-hindi ${lang === "hi" ? "text-primary font-bold" : "text-muted-foreground"}`}
+              >
+                हिं
+              </span>
+            </div>
+          </button>
+        </div>
+
         {/* Nav links */}
         <nav
-          className="flex-1 overflow-y-auto py-4 px-4 space-y-1"
+          className="flex-1 overflow-y-auto py-3 px-3 space-y-1"
           aria-label="Mobile navigation"
         >
           {allLinks.map((link) => (
@@ -111,7 +149,7 @@ export default function MobileNav({ open, onClose, navLinks }: MobileNavProps) {
               onClick={onClose}
               className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                 currentPath === link.href
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/10 text-primary font-semibold"
                   : "text-foreground/80 hover:text-foreground hover:bg-muted"
               }`}
             >
@@ -125,8 +163,11 @@ export default function MobileNav({ open, onClose, navLinks }: MobileNavProps) {
           {isAuthenticated ? (
             <>
               {user?.name && (
-                <p className="text-sm text-muted-foreground px-1 mb-2 truncate">
-                  {user.name}
+                <p
+                  className="text-sm text-muted-foreground px-1 mb-2 truncate"
+                  title={user.name}
+                >
+                  👤 {user.name}
                 </p>
               )}
               <Button
@@ -152,16 +193,18 @@ export default function MobileNav({ open, onClose, navLinks }: MobileNavProps) {
                 {t("nav.login")}
               </Button>
               <Button
-                className="w-full"
-                onClick={handleLogin}
+                className="w-full gradient-saffron-accent text-primary-foreground border-0"
+                asChild
                 data-ocid="mobile-register-btn"
               >
-                {t("nav.register")}
+                <Link to="/register" onClick={onClose}>
+                  {t("nav.register")}
+                </Link>
               </Button>
             </>
           )}
         </div>
-      </div>
+      </dialog>
     </>
   );
 }

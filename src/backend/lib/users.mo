@@ -3,7 +3,6 @@ import UserTypes "../types/users";
 import List "mo:core/List";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
-
 module {
   public func getById(
     users : List.List<UserTypes.User>,
@@ -102,5 +101,46 @@ module {
         case (#admin) { switch (u.role) { case (#admin) true; case _ false } };
       };
     }).size();
+  };
+
+  // Open registration (no Principal required)
+  public func openRegister(
+    openUsers : List.List<UserTypes.OpenUserRecord>,
+    nextId : { var value : Nat },
+    input : UserTypes.OpenUserInput
+  ) : UserTypes.OpenRegisterResult {
+    // Duplicate check by phone or email
+    let duplicate = openUsers.find(func(u) {
+      (input.phone != "" and u.phone == input.phone) or
+      (input.email != "" and u.email == input.email)
+    });
+    switch (duplicate) {
+      case (?_) {
+        #err("Is phone ya email se pehle se registration ho chuka hai. Duplicate registration allowed nahi hai.");
+      };
+      case null {
+        let id = nextId.value;
+        nextId.value += 1;
+        let record : UserTypes.OpenUserRecord = {
+          id;
+          name = input.name;
+          phone = input.phone;
+          email = input.email;
+          city = input.city;
+          state = input.state;
+          serviceCategory = input.serviceCategory;
+          role = input.role;
+          createdAt = Time.now();
+        };
+        openUsers.add(record);
+        #ok(record);
+      };
+    };
+  };
+
+  public func openUserCount(
+    openUsers : List.List<UserTypes.OpenUserRecord>
+  ) : Nat {
+    openUsers.size();
   };
 };

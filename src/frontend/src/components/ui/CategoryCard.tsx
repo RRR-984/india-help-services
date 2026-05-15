@@ -28,6 +28,21 @@ const iconEmoji: Record<string, string> = {
   food: "🍽️",
   real_estate: "🏗️",
   insurance: "🛡️",
+  online_classes: "🎓",
+  onlineclasses: "🎓",
+  online: "🎓",
+  classes: "🎓",
+  yoga: "🧘",
+  fitness: "💪",
+  coaching: "🎯",
+  nri: "🌐",
+  nrihelp: "🌐",
+  marriage: "💍",
+  events: "🎉",
+  house: "🔧",
+  housemaintenance: "🔧",
+  guide: "🗺️",
+  indianguide: "🗺️",
 };
 
 function getEmoji(icon: string): string {

@@ -1,14 +1,15 @@
 {
-  "overview": "India Help Services is a fully responsive SaaS platform connecting Indians with service providers across Government, Legal, Medical, Financial, Education, Home, Tech, Travel, and Business sectors. Features bilingual (Hindi/English) support, service discovery with search and filters, provider profiles with ratings and reviews, user accounts for both seekers and providers, and an admin panel for full platform management.",
+  "overview": "All India Help Services is a bilingual (Hindi/English) marketplace portal connecting people across India with verified service providers in 9 categories: Government, Legal, Medical, Education, Financial, Home, Technology, Travel, and Business. Users can discover providers, submit inquiries, leave reviews, and manage their profiles — while admins oversee the entire platform.",
   "features": [
-    "Homepage with hero section and service category grid",
-    "Service listings with search and filter by category, location, and type",
-    "Service provider profiles with ratings and reviews",
-    "User authentication for seekers and providers with Internet Identity",
-    "Admin panel to manage categories, listings, and users",
-    "Contact and inquiry forms with email notifications",
-    "Hindi and English bilingual support with language toggle",
-    "Indian color theme (saffron, white, green) with fully responsive layout"
+    "Browse service providers across 9 categories",
+    "Search and filter by category, location, rating",
+    "View provider profiles with reviews and verified badges",
+    "Submit inquiries to service providers",
+    "Hindi/English bilingual interface",
+    "User and provider dashboards",
+    "Admin panel for approvals and management",
+    "Mobile-responsive design",
+    "Internet Identity authentication"
   ],
   "category": "marketplace",
   "tags": [
@@ -16,10 +17,9 @@
     "services",
     "marketplace",
     "bilingual",
-    "admin-panel",
-    "responsive",
-    "saas",
+    "hindi",
+    "providers",
     "directory"
   ],
-  "last_updated": "2026-04-09T19:41:14.480Z"
+  "last_updated": "2026-04-12T13:49:01.173Z"
 }

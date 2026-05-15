@@ -29,11 +29,23 @@ export { InquiryStatus, Role } from "../backend";
 // UI-specific types
 export type Language = "en" | "hi";
 
+/** Extended search filter used by useSearchProviders */
+export interface ProviderSearchFilter {
+  searchQuery?: string;
+  categoryId?: bigint;
+  state?: string;
+  city?: string;
+  minRating?: number;
+  isVerified?: boolean;
+}
+
 export interface FilterState {
   categoryId?: bigint;
   state?: string;
   city?: string;
   search?: string;
+  minRating?: number;
+  isVerified?: boolean;
 }
 
 export interface PaginationState {
@@ -46,3 +58,32 @@ export type NavLink = {
   labelHi: string;
   href: string;
 };
+
+/** Inquiry status display helpers */
+export type InquiryStatusDisplay = {
+  label: string;
+  labelHi: string;
+  className: string;
+};
+
+// ─── Online Classes ──────────────────────────────────────────────────────────
+
+export type ClassSubCategory = "yoga" | "dhyan" | "fitness" | "coaching";
+
+export interface ClassVideo {
+  id: bigint;
+  providerId: string;
+  title: string;
+  description: string;
+  subCategory: ClassSubCategory;
+  fileKey: string;
+  uploadedAt: bigint;
+  isActive: boolean;
+}
+
+export interface ClassVideoInput {
+  title: string;
+  description: string;
+  subCategory: ClassSubCategory;
+  fileKey: string;
+}

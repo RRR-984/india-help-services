@@ -28,4 +28,30 @@ module {
     city : Text;
     role : ?Types.Role;
   };
+
+  // Result type for open registration (avoids deprecated Result module)
+  public type OpenRegisterResult = { #ok : OpenUserRecord; #err : Text };
+
+  // Open (no-login) registration types
+  public type OpenUserInput = {
+    name : Text;
+    phone : Text;
+    email : Text;
+    city : Text;
+    state : Text;
+    serviceCategory : Text;
+    role : Types.Role;
+  };
+
+  public type OpenUserRecord = {
+    id : Nat;
+    name : Text;
+    phone : Text;
+    email : Text;
+    city : Text;
+    state : Text;
+    serviceCategory : Text;
+    role : Types.Role;
+    createdAt : Types.Timestamp;
+  };
 };

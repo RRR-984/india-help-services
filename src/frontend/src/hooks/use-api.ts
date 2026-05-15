@@ -2,12 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CategoryId,
   CategoryInput,
+  ClassSubCategory,
+  ClassVideo,
+  ClassVideoInput,
   InquiryId,
   InquiryInput,
   InquiryStatus,
   ProviderFilter,
   ProviderId,
   ProviderInput,
+  ProviderSearchFilter,
   ReviewInput,
   Role,
   UserId,
@@ -66,6 +70,72 @@ export function useProviders(
   });
 }
 
+/** Search providers with full-text + filter support */
+export function useSearchProviders(
+  searchFilter: ProviderSearchFilter,
+  page = 0n,
+  pageSize = 12n,
+) {
+  const { actor, isFetching } = useActor();
+  // Fall back to listProviders with subset of filter fields
+  const legacyFilter: ProviderFilter = {
+    categoryId: searchFilter.categoryId,
+    state: searchFilter.state,
+    city: searchFilter.city,
+  };
+  return useQuery({
+    queryKey: [
+      "providers",
+      "search",
+      searchFilter.searchQuery ?? "",
+      searchFilter.categoryId?.toString() ?? "",
+      searchFilter.state ?? "",
+      searchFilter.city ?? "",
+      searchFilter.isVerified?.toString() ?? "",
+      page.toString(),
+    ],
+    queryFn: () => actor!.listProviders(legacyFilter, page, pageSize),
+    enabled: !!actor && !isFetching,
+  });
+}
+
+/** Providers by category with pagination */
+export function useProvidersByCategory(
+  categoryId: CategoryId | undefined,
+  page = 0n,
+  pageSize = 12n,
+) {
+  const { actor, isFetching } = useActor();
+  return useQuery({
+    queryKey: [
+      "providers",
+      "category",
+      categoryId?.toString(),
+      page.toString(),
+    ],
+    queryFn: () => actor!.listProviders({ categoryId }, page, pageSize),
+    enabled: !!actor && !isFetching && categoryId !== undefined,
+  });
+}
+
+/** Featured providers — returns top-rated verified providers (up to 6) */
+export function useFeaturedProviders() {
+  const { actor, isFetching } = useActor();
+  return useQuery({
+    queryKey: ["providers", "featured"],
+    queryFn: async () => {
+      const result = await actor!.listProviders({}, 0n, 20n);
+      const sorted = [...result.items]
+        .filter((p) => p.isVerified && p.isActive)
+        .sort((a, b) => b.averageRating - a.averageRating)
+        .slice(0, 6);
+      return sorted;
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 5 * 60 * 1000, // 5 min cache for featured
+  });
+}
+
 export function useProvider(id: ProviderId | undefined) {
   const { actor, isFetching } = useActor();
   return useQuery({
@@ -81,6 +151,19 @@ export function useMyProviderProfile() {
     queryKey: ["myProviderProfile"],
     queryFn: () => actor!.getMyProviderProfile(),
     enabled: !!actor && !isFetching,
+  });
+}
+
+export function useCheckContactAvailable(
+  providerId: bigint | undefined,
+  currentHHMM: string,
+) {
+  const { actor, isFetching } = useActor();
+  return useQuery({
+    queryKey: ["checkContactAvailable", providerId?.toString(), currentHHMM],
+    queryFn: () => actor!.checkContactAvailable(providerId!, currentHHMM),
+    enabled: !!actor && !isFetching && providerId !== undefined,
+    staleTime: 60 * 1000, // 1 min — time doesn't change that fast
   });
 }
 
@@ -306,5 +389,238 @@ export function useSeedSampleData() {
       qc.invalidateQueries({ queryKey: ["categories"] });
       qc.invalidateQueries({ queryKey: ["providers"] });
     },
+  });
+}
+
+// ─── Online Classes ───────────────────────────────────────────────────────────
+
+/** Extended actor type to support online classes methods */
+interface ActorWithClassVideos {
+  addClassVideo: (
+    providerId: string,
+    input: ClassVideoInput,
+  ) => Promise<ClassVideo>;
+  getMyClassVideos: (providerId: string) => Promise<ClassVideo[]>;
+  deleteClassVideo: (videoId: bigint, providerId: string) => Promise<boolean>;
+  toggleClassVideoActive: (
+    videoId: bigint,
+    providerId: string,
+  ) => Promise<[ClassVideo] | []>;
+  getClassVideosByProvider: (providerId: string) => Promise<ClassVideo[]>;
+  getClassVideosBySubCategory: (
+    subCategory: ClassSubCategory,
+  ) => Promise<ClassVideo[]>;
+}
+
+/** All class videos for a given sub-category (public browse) */
+export function useClassVideos(subCategory?: ClassSubCategory) {
+  const { actor, isFetching } = useActor();
+  return useQuery<ClassVideo[]>({
+    queryKey: ["classVideos", subCategory ?? "all"],
+    queryFn: async () => {
+      if (!actor) return [];
+      const ext = actor as unknown as ActorWithClassVideos;
+      if (typeof ext.getClassVideosBySubCategory !== "function") return [];
+      if (subCategory) {
+        return ext.getClassVideosBySubCategory(subCategory);
+      }
+      // Fetch all sub-categories and merge
+      const categories: ClassSubCategory[] = [
+        "yoga",
+        "dhyan",
+        "fitness",
+        "coaching",
+      ];
+      const results = await Promise.all(
+        categories.map((c) => ext.getClassVideosBySubCategory(c)),
+      );
+      return results.flat();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+/** Videos for a specific provider (public) */
+export function useProviderClassVideos(providerId: string | undefined) {
+  const { actor, isFetching } = useActor();
+  return useQuery<ClassVideo[]>({
+    queryKey: ["classVideos", "provider", providerId],
+    queryFn: async () => {
+      if (!actor || !providerId) return [];
+      const ext = actor as unknown as ActorWithClassVideos;
+      if (typeof ext.getClassVideosByProvider !== "function") return [];
+      return ext.getClassVideosByProvider(providerId);
+    },
+    enabled: !!actor && !isFetching && !!providerId,
+  });
+}
+
+/** My videos (provider dashboard) */
+export function useMyClassVideos(providerId: string | undefined) {
+  const { actor, isFetching } = useActor();
+  return useQuery<ClassVideo[]>({
+    queryKey: ["classVideos", "mine", providerId],
+    queryFn: async () => {
+      if (!actor || !providerId) return [];
+      const ext = actor as unknown as ActorWithClassVideos;
+      if (typeof ext.getMyClassVideos !== "function") return [];
+      return ext.getMyClassVideos(providerId);
+    },
+    enabled: !!actor && !isFetching && !!providerId,
+  });
+}
+
+export function useAddClassVideo() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      providerId,
+      input,
+    }: {
+      providerId: string;
+      input: ClassVideoInput;
+    }): Promise<ClassVideo> => {
+      const ext = actor as unknown as ActorWithClassVideos;
+      if (!ext || typeof ext.addClassVideo !== "function") {
+        throw new Error("Backend method not available");
+      }
+      return ext.addClassVideo(providerId, input);
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({
+        queryKey: ["classVideos", "mine", vars.providerId],
+      });
+      qc.invalidateQueries({ queryKey: ["classVideos"] });
+    },
+  });
+}
+
+export function useDeleteClassVideo() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      videoId,
+      providerId,
+    }: {
+      videoId: bigint;
+      providerId: string;
+    }): Promise<boolean> => {
+      const ext = actor as unknown as ActorWithClassVideos;
+      if (!ext || typeof ext.deleteClassVideo !== "function") {
+        throw new Error("Backend method not available");
+      }
+      return ext.deleteClassVideo(videoId, providerId);
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({
+        queryKey: ["classVideos", "mine", vars.providerId],
+      });
+      qc.invalidateQueries({ queryKey: ["classVideos"] });
+    },
+  });
+}
+
+export function useToggleClassVideoActive() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      videoId,
+      providerId,
+    }: {
+      videoId: bigint;
+      providerId: string;
+    }): Promise<ClassVideo | null> => {
+      const ext = actor as unknown as ActorWithClassVideos;
+      if (!ext || typeof ext.toggleClassVideoActive !== "function") {
+        throw new Error("Backend method not available");
+      }
+      const result = await ext.toggleClassVideoActive(videoId, providerId);
+      return result.length > 0 ? (result[0] ?? null) : null;
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({
+        queryKey: ["classVideos", "mine", vars.providerId],
+      });
+      qc.invalidateQueries({ queryKey: ["classVideos"] });
+    },
+  });
+}
+
+// ─── Open Registration (no Internet Identity required) ───────────────────────
+
+export interface OpenUserInput {
+  name: string;
+  phone: string;
+  email: string;
+  city: string;
+  state: string;
+  serviceCategory: string;
+  role: { provider: null } | { seeker: null };
+}
+
+export type OpenRegisterResult = { ok: unknown } | { err: string };
+
+export function useOpenRegisterUser() {
+  const { actor } = useActor();
+  return useMutation({
+    mutationFn: async (input: OpenUserInput): Promise<OpenRegisterResult> => {
+      const a = actor as unknown as Record<
+        string,
+        (i: OpenUserInput) => Promise<OpenRegisterResult>
+      >;
+      if (!a || typeof a.openRegisterUser !== "function") {
+        return { err: "Backend method not available yet" };
+      }
+      return a.openRegisterUser(input);
+    },
+  });
+}
+
+// ─── Visitor Stats ────────────────────────────────────────────────────────────
+
+const VISITOR_ID_KEY = "ihv_uid";
+
+interface VisitorStats {
+  totalVisits: bigint;
+  uniqueVisitors: bigint;
+}
+
+// Extended actor type to support visitor methods (added in latest backend version)
+interface ActorWithVisitor {
+  trackVisit: (visitorId: string) => Promise<VisitorStats>;
+  getVisitorStats: () => Promise<VisitorStats>;
+}
+
+function getOrCreateVisitorId(): string {
+  let id = localStorage.getItem(VISITOR_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(VISITOR_ID_KEY, id);
+  }
+  return id;
+}
+
+export function useVisitorStats() {
+  const { actor, isFetching } = useActor();
+  return useQuery<VisitorStats>({
+    queryKey: ["visitorStats"],
+    queryFn: async () => {
+      if (!actor) return { totalVisits: 0n, uniqueVisitors: 0n };
+      const ext = actor as unknown as ActorWithVisitor;
+      if (typeof ext.trackVisit === "function") {
+        const visitorId = getOrCreateVisitorId();
+        return ext.trackVisit(visitorId);
+      }
+      if (typeof ext.getVisitorStats === "function") {
+        return ext.getVisitorStats();
+      }
+      return { totalVisits: 0n, uniqueVisitors: 0n };
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 60 * 1000,
   });
 }

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -27,21 +27,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "@tanstack/react-router";
 import {
   BarChart3,
   CheckCircle2,
+  Database,
   Edit2,
-  FileText,
   LayoutDashboard,
   MessageSquare,
   Plus,
   RefreshCw,
   Shield,
+  Star,
   Tag,
   Trash2,
+  UserCheck,
   Users,
   XCircle,
 } from "lucide-react";
@@ -91,37 +94,65 @@ const EMPTY_CAT: CategoryInput = {
   displayOrder: BigInt(0),
 };
 
+// ─── Skeleton Stat Card ───────────────────────────────────────────────────────
+
+function StatCardSkeleton() {
+  return (
+    <Card className="overflow-hidden border border-border">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-8 w-16" />
+          </div>
+          <Skeleton className="w-10 h-10 rounded-xl" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
 interface StatCardProps {
   label: string;
-  value: number;
+  sublabel: string;
+  value: number | string;
   icon: React.ReactNode;
-  color: string;
+  colorClass: string;
   delay: number;
 }
 
-function StatCard({ label, value, icon, color, delay }: StatCardProps) {
+function StatCard({
+  label,
+  sublabel,
+  value,
+  icon,
+  colorClass,
+  delay,
+}: StatCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4 }}
+      transition={{ delay, duration: 0.35 }}
     >
-      <Card className="overflow-hidden border border-border">
+      <Card className="overflow-hidden border border-border hover:shadow-card transition-smooth">
         <CardContent className="p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5 truncate">
                 {label}
               </p>
+              <p className="text-[11px] text-muted-foreground/70 mb-2 truncate">
+                {sublabel}
+              </p>
               <p className="text-3xl font-display font-bold text-foreground">
-                {value.toLocaleString()}
+                {typeof value === "number" ? value.toLocaleString() : value}
               </p>
             </div>
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: `${color}18`, color }}
+              className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${colorClass}`}
             >
               {icon}
             </div>
@@ -166,6 +197,7 @@ function CategoryDialog({
   }, [editTarget]);
 
   const isEdit = editTarget !== null;
+  const isPending = createCategory.isPending || updateCategory.isPending;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,8 +214,6 @@ function CategoryDialog({
       toast.error(lang === "hi" ? "कुछ गलत हुआ।" : "Something went wrong.");
     }
   };
-
-  const isPending = createCategory.isPending || updateCategory.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -203,7 +233,6 @@ function CategoryDialog({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          {/* Names */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="cat-name-en">Name (English)</Label>
@@ -239,7 +268,6 @@ function CategoryDialog({
             </div>
           </div>
 
-          {/* Descriptions */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="cat-desc-en">Description (English)</Label>
@@ -275,7 +303,6 @@ function CategoryDialog({
             </div>
           </div>
 
-          {/* Icon, Order */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="cat-icon">Icon (emoji)</Label>
@@ -305,7 +332,6 @@ function CategoryDialog({
             </div>
           </div>
 
-          {/* Color */}
           <div className="space-y-2">
             <Label>Color</Label>
             <div className="flex items-center gap-3 flex-wrap">
@@ -365,25 +391,29 @@ function CategoryDialog({
   );
 }
 
-// ─── Confirm Delete Dialog ────────────────────────────────────────────────────
+// ─── Confirm Dialog ───────────────────────────────────────────────────────────
 
-interface ConfirmDeleteProps {
+interface ConfirmDialogProps {
   open: boolean;
   title: string;
   description: string;
+  confirmLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
   isPending?: boolean;
+  variant?: "destructive" | "default";
 }
 
 function ConfirmDialog({
   open,
   title,
   description,
+  confirmLabel = "Confirm",
   onConfirm,
   onCancel,
   isPending,
-}: ConfirmDeleteProps) {
+  variant = "destructive",
+}: ConfirmDialogProps) {
   return (
     <AlertDialog open={open}>
       <AlertDialogContent data-ocid="confirm-dialog">
@@ -396,10 +426,14 @@ function ConfirmDialog({
           <AlertDialogAction
             onClick={onConfirm}
             disabled={isPending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className={
+              variant === "destructive"
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
+            }
             data-ocid="confirm-action-btn"
           >
-            {isPending ? "Processing..." : "Confirm"}
+            {isPending ? "Processing..." : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -407,109 +441,160 @@ function ConfirmDialog({
   );
 }
 
-// ─── Dashboard Tab ─────────────────────────────────────────────────────────────
+// ─── Statistics Tab ────────────────────────────────────────────────────────────
 
-function DashboardTab({ lang }: { lang: "en" | "hi" }) {
+function StatisticsTab({ lang }: { lang: "en" | "hi" }) {
   const { data: stats, isLoading } = useAdminStats();
+  const { data: allProviders } = useProviders({}, BigInt(0), BigInt(200));
+  const { data: users } = useUsers();
+  const seedData = useSeedSampleData();
+  const [showSeedConfirm, setShowSeedConfirm] = useState(false);
 
-  if (isLoading)
-    return (
-      <div className="py-8">
-        <LoadingSpinner />
-      </div>
-    );
-  if (!stats) return null;
+  const providerList = allProviders?.items ?? [];
+  const pendingCount = providerList.filter(
+    (p) => !p.isVerified && p.isActive,
+  ).length;
+  const verifiedCount = providerList.filter((p) => p.isVerified).length;
+  const userCount = users?.length ?? 0;
 
   const statItems = [
     {
+      label: lang === "hi" ? "कुल उपयोगकर्ता" : "Total Users",
+      sublabel: lang === "hi" ? "पंजीकृत सदस्य" : "Registered members",
+      value: isLoading ? "—" : userCount,
+      icon: <Users size={20} />,
+      colorClass: "bg-blue-500/10 text-blue-600",
+    },
+    {
       label: lang === "hi" ? "कुल प्रदाता" : "Total Providers",
-      value: Number(stats.totalProviders),
-      icon: <BarChart3 size={18} />,
-      color: "#FF9933",
+      sublabel: lang === "hi" ? "सेवा प्रदाता" : "Service providers",
+      value: isLoading ? "—" : Number(stats?.totalProviders ?? 0),
+      icon: <UserCheck size={20} />,
+      colorClass: "bg-primary/10 text-primary",
+    },
+    {
+      label: lang === "hi" ? "कुल श्रेणियां" : "Total Categories",
+      sublabel: lang === "hi" ? "सेवा श्रेणियां" : "Service categories",
+      value: isLoading ? "—" : Number(stats?.totalCategories ?? 0),
+      icon: <Tag size={20} />,
+      colorClass: "bg-violet-500/10 text-violet-600",
+    },
+    {
+      label: lang === "hi" ? "कुल पूछताछ" : "Total Inquiries",
+      sublabel: lang === "hi" ? "ग्राहक सवाल" : "Customer inquiries",
+      value: isLoading ? "—" : Number(stats?.totalInquiries ?? 0),
+      icon: <MessageSquare size={20} />,
+      colorClass: "bg-cyan-500/10 text-cyan-600",
     },
     {
       label: lang === "hi" ? "सेवा खोजने वाले" : "Service Seekers",
-      value: Number(stats.totalSeekers),
-      icon: <Users size={18} />,
-      color: "#138808",
+      sublabel: lang === "hi" ? "उपयोगकर्ता खोजकर्ता" : "Users seeking services",
+      value: isLoading ? "—" : Number(stats?.totalSeekers ?? 0),
+      icon: <BarChart3 size={20} />,
+      colorClass: "bg-secondary/10 text-secondary",
     },
     {
-      label: lang === "hi" ? "श्रेणियां" : "Categories",
-      value: Number(stats.totalCategories),
-      icon: <Tag size={18} />,
-      color: "#1E40AF",
+      label: lang === "hi" ? "सत्यापित प्रदाता" : "Verified Providers",
+      sublabel: lang === "hi" ? "मंजूर प्रदाता" : "Approved providers",
+      value: isLoading ? "—" : verifiedCount,
+      icon: <Star size={20} />,
+      colorClass: "bg-primary/15 text-primary",
     },
     {
-      label: lang === "hi" ? "पूछताछ" : "Inquiries",
-      value: Number(stats.totalInquiries),
-      icon: <MessageSquare size={18} />,
-      color: "#7C3AED",
+      label: lang === "hi" ? "मंजूरी बाकी" : "Pending Approvals",
+      sublabel: lang === "hi" ? "समीक्षा की आवश्यकता" : "Awaiting review",
+      value: isLoading ? "—" : pendingCount,
+      icon: <RefreshCw size={20} />,
+      colorClass: "bg-destructive/10 text-destructive",
     },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statItems.map((s, i) => (
-          <StatCard key={s.label} {...s} delay={i * 0.08} />
-        ))}
-      </div>
+      {/* Stats Grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {(["s1", "s2", "s3", "s4", "s5", "s6", "s7"] as const).map((k) => (
+            <StatCardSkeleton key={k} />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {statItems.map((s, i) => (
+            <StatCard key={s.label} {...s} delay={i * 0.07} />
+          ))}
+        </div>
+      )}
 
-      <Card className="border border-border">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">
-            {lang === "hi" ? "प्लेटफॉर्म अवलोकन" : "Platform Overview"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="space-y-3">
-              {[
-                {
-                  label: lang === "hi" ? "कुल प्रदाता" : "Total Providers",
-                  val: Number(stats.totalProviders),
-                },
-                {
-                  label: lang === "hi" ? "सेवा खोजने वाले" : "Service Seekers",
-                  val: Number(stats.totalSeekers),
-                },
-              ].map((row) => (
-                <div
-                  key={row.label}
-                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                >
-                  <span className="text-muted-foreground">{row.label}</span>
-                  <span className="font-semibold font-display text-foreground">
-                    {row.val.toLocaleString()}
-                  </span>
-                </div>
-              ))}
+      {/* Seed Data Section */}
+      <Card className="border border-border bg-muted/30">
+        <CardContent className="p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Database size={18} className="text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground text-sm">
+                  {lang === "hi" ? "सैंपल डेटा जोड़ें" : "Seed Sample Data"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {lang === "hi"
+                    ? "डेमो/परीक्षण के लिए नमूना श्रेणियां और प्रदाता जोड़ें"
+                    : "Add sample categories and providers for demo/testing purposes"}
+                </p>
+              </div>
             </div>
-            <div className="space-y-3">
-              {[
-                {
-                  label: lang === "hi" ? "श्रेणियां" : "Categories",
-                  val: Number(stats.totalCategories),
-                },
-                {
-                  label: lang === "hi" ? "पूछताछ" : "Inquiries",
-                  val: Number(stats.totalInquiries),
-                },
-              ].map((row) => (
-                <div
-                  key={row.label}
-                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                >
-                  <span className="text-muted-foreground">{row.label}</span>
-                  <span className="font-semibold font-display text-foreground">
-                    {row.val.toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSeedConfirm(true)}
+              disabled={seedData.isPending}
+              data-ocid="seed-data-btn"
+              className="shrink-0"
+            >
+              {seedData.isPending ? (
+                <>
+                  <RefreshCw size={14} className="mr-2 animate-spin" />
+                  {lang === "hi" ? "जोड़ा जा रहा है..." : "Seeding..."}
+                </>
+              ) : (
+                <>
+                  <Database size={14} className="mr-2" />
+                  {lang === "hi" ? "सैंपल डेटा जोड़ें" : "Seed Sample Data"}
+                </>
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={showSeedConfirm}
+        title={lang === "hi" ? "सैंपल डेटा जोड़ें?" : "Seed Sample Data?"}
+        description={
+          lang === "hi"
+            ? "यह डेमो श्रेणियां और प्रदाता जोड़ेगा। मौजूदा डेटा प्रभावित नहीं होगा।"
+            : "This will add demo categories and providers to the platform. Existing data will not be affected."
+        }
+        confirmLabel={lang === "hi" ? "जोड़ें" : "Seed Data"}
+        onConfirm={async () => {
+          setShowSeedConfirm(false);
+          try {
+            await seedData.mutateAsync();
+            toast.success(
+              lang === "hi"
+                ? "सैंपल डेटा जोड़ा गया!"
+                : "Sample data seeded successfully!",
+            );
+          } catch {
+            toast.error(lang === "hi" ? "कुछ गलत हुआ।" : "Something went wrong.");
+          }
+        }}
+        onCancel={() => setShowSeedConfirm(false)}
+        isPending={seedData.isPending}
+        variant="default"
+      />
     </div>
   );
 }
@@ -520,7 +605,6 @@ function CategoriesTab({ lang }: { lang: "en" | "hi" }) {
   const { data: categories, isLoading } = useAllCategories();
   const deleteCategory = useDeleteCategory();
   const setCategoryActive = useSetCategoryActive();
-
   const [showDialog, setShowDialog] = useState(false);
   const [editTarget, setEditTarget] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CategoryId | null>(null);
@@ -559,14 +643,16 @@ function CategoriesTab({ lang }: { lang: "en" | "hi" }) {
           )}
         </h2>
         <Button size="sm" onClick={handleOpenAdd} data-ocid="add-category-btn">
-          <Plus size={14} className="mr-1" />
+          <Plus size={14} className="mr-1.5" />
           {lang === "hi" ? "श्रेणी जोड़ें" : "Add Category"}
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="py-8">
-          <LoadingSpinner />
+        <div className="space-y-2">
+          {(["r1", "r2", "r3", "r4", "r5"] as const).map((k) => (
+            <Skeleton key={k} className="h-14 w-full rounded-lg" />
+          ))}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
@@ -579,10 +665,10 @@ function CategoriesTab({ lang }: { lang: "en" | "hi" }) {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
                   {lang === "hi" ? "नाम (EN)" : "Name (EN)"}
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap hidden sm:table-cell">
                   {lang === "hi" ? "नाम (HI)" : "Name (HI)"}
                 </th>
-                <th className="px-4 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">
                   {lang === "hi" ? "क्रम" : "Order"}
                 </th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">
@@ -600,6 +686,7 @@ function CategoriesTab({ lang }: { lang: "en" | "hi" }) {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="hover:bg-muted/20 transition-colors"
+                  data-ocid={`cat-row-${cat.id}`}
                 >
                   <td className="px-4 py-3">
                     <div
@@ -612,10 +699,10 @@ function CategoriesTab({ lang }: { lang: "en" | "hi" }) {
                   <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap max-w-[160px] truncate">
                     {cat.name.en}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap max-w-[160px] truncate">
+                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap max-w-[160px] truncate hidden sm:table-cell">
                     {cat.name.hi}
                   </td>
-                  <td className="px-4 py-3 text-center text-muted-foreground">
+                  <td className="px-4 py-3 text-center text-muted-foreground hidden md:table-cell">
                     {Number(cat.displayOrder)}
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -686,9 +773,14 @@ function CategoriesTab({ lang }: { lang: "en" | "hi" }) {
                     colSpan={6}
                     className="px-4 py-12 text-center text-muted-foreground"
                   >
-                    {lang === "hi"
-                      ? "कोई श्रेणी नहीं मिली"
-                      : "No categories found"}
+                    <div className="flex flex-col items-center gap-2">
+                      <Tag size={32} className="opacity-30" />
+                      <span>
+                        {lang === "hi"
+                          ? "कोई श्रेणी नहीं मिली"
+                          : "No categories found"}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -712,6 +804,7 @@ function CategoriesTab({ lang }: { lang: "en" | "hi" }) {
             ? "यह क्रिया उलटी नहीं की जा सकती। यह श्रेणी स्थायी रूप से हटा दी जाएगी।"
             : "This action cannot be undone. The category will be permanently removed."
         }
+        confirmLabel={lang === "hi" ? "हटाएं" : "Delete"}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
         isPending={deleteCategory.isPending}
@@ -722,20 +815,35 @@ function CategoriesTab({ lang }: { lang: "en" | "hi" }) {
 
 // ─── Providers Tab ─────────────────────────────────────────────────────────────
 
+type ProviderFilter = "pending" | "active" | "disabled";
+
 function ProvidersTab({ lang }: { lang: "en" | "hi" }) {
   const { data: providersPage, isLoading } = useProviders(
     {},
     BigInt(0),
-    BigInt(100),
+    BigInt(200),
   );
   const { data: categories } = useAllCategories();
   const approveProvider = useApproveProvider();
   const disableProvider = useDisableProvider();
+  const [activeFilter, setActiveFilter] = useState<ProviderFilter>("pending");
   const [disableTarget, setDisableTarget] = useState<bigint | null>(null);
 
   const catMap = new Map(
     (categories ?? []).map((c) => [c.id.toString(), c.name]),
   );
+  const providers = providersPage?.items ?? [];
+
+  const pendingProviders = providers.filter((p) => !p.isVerified && p.isActive);
+  const activeProviders = providers.filter((p) => p.isVerified && p.isActive);
+  const disabledProviders = providers.filter((p) => !p.isActive);
+
+  const filteredProviders =
+    activeFilter === "pending"
+      ? pendingProviders
+      : activeFilter === "active"
+        ? activeProviders
+        : disabledProviders;
 
   const handleDisableConfirm = async () => {
     if (disableTarget === null) return;
@@ -751,7 +859,31 @@ function ProvidersTab({ lang }: { lang: "en" | "hi" }) {
     }
   };
 
-  const providers = providersPage?.items ?? [];
+  const filterTabs: {
+    key: ProviderFilter;
+    labelEn: string;
+    labelHi: string;
+    count: number;
+  }[] = [
+    {
+      key: "pending",
+      labelEn: "Pending Approval",
+      labelHi: "मंजूरी बाकी",
+      count: pendingProviders.length,
+    },
+    {
+      key: "active",
+      labelEn: "Active",
+      labelHi: "सक्रिय",
+      count: activeProviders.length,
+    },
+    {
+      key: "disabled",
+      labelEn: "Disabled",
+      labelHi: "अक्षम",
+      count: disabledProviders.length,
+    },
+  ];
 
   return (
     <div>
@@ -760,15 +892,48 @@ function ProvidersTab({ lang }: { lang: "en" | "hi" }) {
           {lang === "hi" ? "प्रदाता प्रबंधित करें" : "Manage Providers"}
           {providers.length > 0 && (
             <span className="ml-2 text-xs text-muted-foreground font-normal">
-              ({providers.length})
+              ({providers.length} {lang === "hi" ? "कुल" : "total"})
             </span>
           )}
         </h2>
       </div>
 
+      {/* Filter tabs */}
+      <div
+        className="flex gap-2 mb-4 flex-wrap"
+        data-ocid="provider-filter-tabs"
+      >
+        {filterTabs.map((tab) => (
+          <button
+            type="button"
+            key={tab.key}
+            onClick={() => setActiveFilter(tab.key)}
+            data-ocid={`provider-filter-${tab.key}`}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-smooth border ${
+              activeFilter === tab.key
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
+            }`}
+          >
+            {lang === "hi" ? tab.labelHi : tab.labelEn}
+            <span
+              className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${
+                activeFilter === tab.key
+                  ? "bg-primary-foreground/20 text-primary-foreground"
+                  : "bg-muted"
+              }`}
+            >
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {isLoading ? (
-        <div className="py-8">
-          <LoadingSpinner />
+        <div className="space-y-2">
+          {(["p1", "p2", "p3", "p4", "p5"] as const).map((k) => (
+            <Skeleton key={k} className="h-14 w-full rounded-lg" />
+          ))}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
@@ -778,20 +943,17 @@ function ProvidersTab({ lang }: { lang: "en" | "hi" }) {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
                   {lang === "hi" ? "व्यापार का नाम" : "Business Name"}
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap hidden sm:table-cell">
                   {lang === "hi" ? "स्वामी" : "Owner"}
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">
                   {lang === "hi" ? "श्रेणी" : "Category"}
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">
                   {lang === "hi" ? "राज्य / शहर" : "State / City"}
                 </th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">
-                  {lang === "hi" ? "सत्यापित" : "Verified"}
-                </th>
-                <th className="px-4 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">
-                  {lang === "hi" ? "सक्रिय" : "Active"}
+                  {lang === "hi" ? "स्थिति" : "Status"}
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">
                   {lang === "hi" ? "कार्रवाई" : "Actions"}
@@ -799,60 +961,46 @@ function ProvidersTab({ lang }: { lang: "en" | "hi" }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-card">
-              {providers.map((p) => (
+              {filteredProviders.map((p) => (
                 <tr
                   key={p.id.toString()}
                   className="hover:bg-muted/20 transition-colors"
+                  data-ocid={`provider-row-${p.id}`}
                 >
                   <td className="px-4 py-3 font-medium text-foreground max-w-[160px] truncate whitespace-nowrap">
                     {p.businessName}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap hidden sm:table-cell">
                     {p.ownerName}
                   </td>
-                  <td className="px-4 py-3 max-w-[120px] whitespace-nowrap">
-                    {p.categoryIds.length > 0 ? (
-                      <span className="text-xs text-muted-foreground">
-                        {catMap.get(p.categoryIds[0].toString())?.en ?? "—"}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
+                  <td className="px-4 py-3 max-w-[120px] whitespace-nowrap hidden md:table-cell">
+                    <span className="text-xs text-muted-foreground">
+                      {p.categoryIds.length > 0
+                        ? (catMap.get(p.categoryIds[0].toString())?.en ?? "—")
+                        : "—"}
+                    </span>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                  <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap hidden lg:table-cell">
                     {p.state}, {p.city}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <Badge
-                      variant={p.isVerified ? "secondary" : "outline"}
-                      className="text-xs"
-                    >
-                      {p.isVerified
-                        ? lang === "hi"
-                          ? "हां"
-                          : "Yes"
-                        : lang === "hi"
-                          ? "नहीं"
-                          : "No"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <Badge
-                      variant={p.isActive ? "default" : "outline"}
-                      className="text-xs"
-                    >
-                      {p.isActive
-                        ? lang === "hi"
-                          ? "सक्रिय"
-                          : "Active"
-                        : lang === "hi"
-                          ? "निष्क्रिय"
-                          : "Inactive"}
-                    </Badge>
+                    {p.isVerified ? (
+                      <Badge variant="secondary" className="text-xs">
+                        {lang === "hi" ? "सत्यापित" : "Verified"}
+                      </Badge>
+                    ) : !p.isActive ? (
+                      <Badge variant="destructive" className="text-xs">
+                        {lang === "hi" ? "अक्षम" : "Disabled"}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        {lang === "hi" ? "समीक्षाधीन" : "Pending"}
+                      </Badge>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      {!p.isVerified && (
+                      {activeFilter === "pending" && !p.isVerified && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -865,7 +1013,7 @@ function ProvidersTab({ lang }: { lang: "en" | "hi" }) {
                           {lang === "hi" ? "मंजूर करें" : "Approve"}
                         </Button>
                       )}
-                      {p.isActive && (
+                      {activeFilter === "active" && p.isActive && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -881,15 +1029,20 @@ function ProvidersTab({ lang }: { lang: "en" | "hi" }) {
                   </td>
                 </tr>
               ))}
-              {providers.length === 0 && (
+              {filteredProviders.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={6}
                     className="px-4 py-12 text-center text-muted-foreground"
                   >
-                    {lang === "hi"
-                      ? "कोई प्रदाता नहीं मिला"
-                      : "No providers found"}
+                    <div className="flex flex-col items-center gap-2">
+                      <UserCheck size={32} className="opacity-30" />
+                      <span>
+                        {lang === "hi"
+                          ? "कोई प्रदाता नहीं मिला"
+                          : "No providers found"}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -906,6 +1059,7 @@ function ProvidersTab({ lang }: { lang: "en" | "hi" }) {
             ? "यह प्रदाता प्रोफाइल को निष्क्रिय कर देगा। आप इसे बाद में सक्रिय कर सकते हैं।"
             : "This will deactivate the provider profile. You can reactivate it later."
         }
+        confirmLabel={lang === "hi" ? "अक्षम करें" : "Disable"}
         onConfirm={handleDisableConfirm}
         onCancel={() => setDisableTarget(null)}
         isPending={disableProvider.isPending}
@@ -919,11 +1073,17 @@ function ProvidersTab({ lang }: { lang: "en" | "hi" }) {
 function UsersTab({ lang }: { lang: "en" | "hi" }) {
   const { data: users, isLoading } = useUsers();
   const setUserRole = useSetUserRole();
+  const [roleFilter, setRoleFilter] = useState<"all" | Role>("all");
   const [roleTarget, setRoleTarget] = useState<{
     userId: string;
     name: string;
   } | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role>(Role.seeker);
+
+  const filteredUsers =
+    roleFilter === "all"
+      ? (users ?? [])
+      : (users ?? []).filter((u) => String(u.role) === roleFilter);
 
   const handleRoleChange = async () => {
     if (!roleTarget) return;
@@ -941,28 +1101,63 @@ function UsersTab({ lang }: { lang: "en" | "hi" }) {
     }
   };
 
-  const roleColors: Record<string, string> = {
-    admin: "destructive",
-    provider: "secondary",
-    seeker: "default",
+  const roleBadgeVariant = (
+    role: string,
+  ): "destructive" | "secondary" | "default" | "outline" => {
+    if (role === "admin") return "destructive";
+    if (role === "provider") return "secondary";
+    return "default";
   };
+
+  const roleFilterOptions: {
+    value: "all" | Role;
+    labelEn: string;
+    labelHi: string;
+  }[] = [
+    { value: "all", labelEn: "All Users", labelHi: "सभी उपयोगकर्ता" },
+    { value: Role.admin, labelEn: "Admins", labelHi: "एडमिन" },
+    { value: Role.provider, labelEn: "Providers", labelHi: "प्रदाता" },
+    { value: Role.seeker, labelEn: "Seekers", labelHi: "खोजकर्ता" },
+  ];
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
         <h2 className="font-semibold text-foreground">
           {lang === "hi" ? "उपयोगकर्ता प्रबंधित करें" : "Manage Users"}
           {users && (
             <span className="ml-2 text-xs text-muted-foreground font-normal">
-              ({users.length})
+              ({filteredUsers.length}
+              {roleFilter !== "all" && ` / ${users.length}`})
             </span>
           )}
         </h2>
+
+        {/* Role filter */}
+        <div className="flex gap-1.5 flex-wrap" data-ocid="user-role-filter">
+          {roleFilterOptions.map((opt) => (
+            <button
+              type="button"
+              key={opt.value}
+              onClick={() => setRoleFilter(opt.value)}
+              data-ocid={`filter-role-${opt.value}`}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-smooth border ${
+                roleFilter === opt.value
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:border-primary/40"
+              }`}
+            >
+              {lang === "hi" ? opt.labelHi : opt.labelEn}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="py-8">
-          <LoadingSpinner />
+        <div className="space-y-2">
+          {(["u1", "u2", "u3", "u4", "u5", "u6"] as const).map((k) => (
+            <Skeleton key={k} className="h-12 w-full rounded-lg" />
+          ))}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
@@ -972,13 +1167,13 @@ function UsersTab({ lang }: { lang: "en" | "hi" }) {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
                   {lang === "hi" ? "नाम" : "Name"}
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap hidden sm:table-cell">
                   {lang === "hi" ? "ईमेल" : "Email"}
                 </th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground whitespace-nowrap">
                   {lang === "hi" ? "भूमिका" : "Role"}
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">
                   {lang === "hi" ? "राज्य / शहर" : "State / City"}
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">
@@ -987,31 +1182,27 @@ function UsersTab({ lang }: { lang: "en" | "hi" }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-card">
-              {(users ?? []).map((u) => (
+              {filteredUsers.map((u) => (
                 <tr
                   key={u.id.toString()}
                   className="hover:bg-muted/20 transition-colors"
+                  data-ocid={`user-row-${u.id}`}
                 >
                   <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
                     {u.name}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs max-w-[200px] truncate whitespace-nowrap">
+                  <td className="px-4 py-3 text-muted-foreground text-xs max-w-[200px] truncate whitespace-nowrap hidden sm:table-cell">
                     {u.email || "—"}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <Badge
-                      variant={
-                        (roleColors[String(u.role)] as
-                          | "destructive"
-                          | "secondary"
-                          | "default") ?? "outline"
-                      }
+                      variant={roleBadgeVariant(String(u.role))}
                       className="text-xs capitalize"
                     >
                       {String(u.role)}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                  <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap hidden md:table-cell">
                     {u.state && u.city
                       ? `${u.state}, ${u.city}`
                       : u.state || u.city || "—"}
@@ -1038,15 +1229,20 @@ function UsersTab({ lang }: { lang: "en" | "hi" }) {
                   </td>
                 </tr>
               ))}
-              {(users ?? []).length === 0 && (
+              {filteredUsers.length === 0 && (
                 <tr>
                   <td
                     colSpan={5}
                     className="px-4 py-12 text-center text-muted-foreground"
                   >
-                    {lang === "hi"
-                      ? "कोई उपयोगकर्ता नहीं मिला"
-                      : "No users found"}
+                    <div className="flex flex-col items-center gap-2">
+                      <Users size={32} className="opacity-30" />
+                      <span>
+                        {lang === "hi"
+                          ? "कोई उपयोगकर्ता नहीं मिला"
+                          : "No users found"}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -1122,9 +1318,7 @@ export default function AdminPage() {
   const { t, lang } = useLanguage();
   const { isAuthenticated, isLoading: authLoading, user, login } = useAuth();
   const navigate = useNavigate();
-  const seedData = useSeedSampleData();
 
-  // Redirect non-admins to /dashboard
   useEffect(() => {
     if (!authLoading && isAuthenticated && user && user.role !== Role.admin) {
       navigate({ to: "/dashboard" });
@@ -1136,7 +1330,11 @@ export default function AdminPage() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center px-4">
-        <div className="text-center space-y-4 max-w-sm">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center space-y-4 max-w-sm"
+        >
           <div className="text-5xl">🔐</div>
           <h2 className="text-2xl font-display font-bold text-foreground">
             {lang === "hi" ? "एडमिन एक्सेस आवश्यक" : "Admin Access Required"}
@@ -1149,7 +1347,7 @@ export default function AdminPage() {
           <Button onClick={login} data-ocid="admin-login-btn">
             {t("nav.login")}
           </Button>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -1163,54 +1361,36 @@ export default function AdminPage() {
       {/* Page Header */}
       <section className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl gradient-saffron-accent flex items-center justify-center shadow-card">
+              <LayoutDashboard size={20} className="text-primary-foreground" />
+            </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground flex items-center gap-2">
-                <LayoutDashboard size={26} className="text-primary" />
-                {t("admin.title")}
+              <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">
+                {lang === "hi" ? "एडमिन कंट्रोल पैनल" : "Admin Control Panel"}
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {lang === "hi"
-                  ? "India Help Services का प्रबंधन करें"
-                  : "Manage India Help Services platform"}
+                  ? "Indiahelpsarvice का प्रबंधन करें"
+                  : "Manage Indiahelpsarvice platform"}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => seedData.mutate()}
-              disabled={seedData.isPending}
-              data-ocid="seed-data-btn"
-              className="self-start sm:self-auto"
-            >
-              {seedData.isPending ? (
-                <>
-                  <RefreshCw size={14} className="mr-2 animate-spin" />
-                  {lang === "hi" ? "जोड़ा जा रहा है..." : "Seeding..."}
-                </>
-              ) : (
-                <>
-                  <FileText size={14} className="mr-2" />
-                  {lang === "hi" ? "सैंपल डेटा जोड़ें" : "Seed Sample Data"}
-                </>
-              )}
-            </Button>
           </div>
         </div>
       </section>
 
       {/* Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="dashboard" data-ocid="admin-tabs">
-          <div className="overflow-x-auto pb-1">
-            <TabsList className="mb-6 h-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <Tabs defaultValue="statistics" data-ocid="admin-tabs">
+          <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="mb-6 h-10 w-max min-w-full sm:w-auto">
               <TabsTrigger
-                value="dashboard"
+                value="statistics"
                 className="gap-1.5 text-xs sm:text-sm"
-                data-ocid="tab-dashboard"
+                data-ocid="tab-statistics"
               >
-                <LayoutDashboard size={14} />
-                {lang === "hi" ? "डैशबोर्ड" : "Dashboard"}
+                <BarChart3 size={14} />
+                {lang === "hi" ? "आंकड़े" : "Statistics"}
               </TabsTrigger>
               <TabsTrigger
                 value="categories"
@@ -1225,7 +1405,7 @@ export default function AdminPage() {
                 className="gap-1.5 text-xs sm:text-sm"
                 data-ocid="tab-providers"
               >
-                <BarChart3 size={14} />
+                <UserCheck size={14} />
                 {lang === "hi" ? "प्रदाता" : "Providers"}
               </TabsTrigger>
               <TabsTrigger
@@ -1239,8 +1419,8 @@ export default function AdminPage() {
             </TabsList>
           </div>
 
-          <TabsContent value="dashboard">
-            <DashboardTab lang={lang} />
+          <TabsContent value="statistics">
+            <StatisticsTab lang={lang} />
           </TabsContent>
 
           <TabsContent value="categories">

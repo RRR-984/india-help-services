@@ -5,7 +5,9 @@ import List "mo:core/List";
 import Runtime "mo:core/Runtime";
 
 mixin (
-  users : List.List<UserTypes.User>
+  users : List.List<UserTypes.User>,
+  openUsers : List.List<UserTypes.OpenUserRecord>,
+  nextOpenUserId : { var value : Nat }
 ) {
   public query ({ caller }) func getMyProfile() : async ?UserTypes.User {
     UserLib.getById(users, caller);
@@ -30,5 +32,14 @@ mixin (
   public query ({ caller }) func listUsers() : async [UserTypes.User] {
     if (not UserLib.isAdmin(users, caller)) Runtime.trap("Unauthorized: admin only");
     UserLib.listAll(users);
+  };
+
+  // Open registration — no login required, duplicate check by phone/email
+  public shared func openRegisterUser(input : UserTypes.OpenUserInput) : async UserTypes.OpenRegisterResult {
+    UserLib.openRegister(openUsers, nextOpenUserId, input);
+  };
+
+  public query func getOpenUserCount() : async Nat {
+    UserLib.openUserCount(openUsers);
   };
 };

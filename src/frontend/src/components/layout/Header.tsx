@@ -19,11 +19,9 @@ export default function Header() {
     { label: t("nav.categories"), href: "/categories" },
   ];
 
-  const handleLogin = () => {
-    login();
-  };
-
   const currentPath = router.state.location.pathname;
+
+  const isActive = (href: string) => currentPath === href;
 
   return (
     <>
@@ -32,34 +30,45 @@ export default function Header() {
         data-ocid="header"
       >
         {/* Indian tricolor strip */}
-        <div className="h-1 w-full flex">
+        <div className="h-1 w-full flex" aria-hidden="true">
           <div className="flex-1 bg-primary" />
-          <div className="flex-1 bg-card" />
+          <div
+            className="flex-1 bg-background"
+            style={{
+              borderTop: "1px solid oklch(var(--border))",
+              borderBottom: "1px solid oklch(var(--border))",
+            }}
+          />
           <div className="flex-1 bg-secondary" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 group min-w-0">
-              <div className="flex items-center gap-1">
-                <span className="text-primary font-display font-bold text-xl leading-none">
+            <Link
+              to="/"
+              className="flex items-center gap-2 group min-w-0"
+              aria-label="Indiahelpsarvice - Home"
+            >
+              <span className="text-2xl" role="img" aria-label="Indian flag">
+                🇮🇳
+              </span>
+              <div className="flex items-baseline gap-0 min-w-0">
+                <span className="text-primary font-display font-bold text-lg leading-none">
                   India
                 </span>
-                <span className="text-secondary font-display font-bold text-xl leading-none">
-                  Help
+                <span className="text-secondary font-display font-bold text-lg leading-none">
+                  help
                 </span>
-              </div>
-              <div className="hidden sm:block">
-                <span className="text-foreground font-display font-semibold text-xl leading-none">
-                  Services
+                <span className="text-foreground font-display font-semibold text-lg leading-none">
+                  sarvice
                 </span>
               </div>
             </Link>
 
             {/* Desktop nav */}
             <nav
-              className="hidden md:flex items-center gap-1"
+              className="hidden md:flex items-center gap-0.5"
               aria-label="Main navigation"
             >
               {navLinks.map((link) => (
@@ -67,8 +76,8 @@ export default function Header() {
                   key={link.href}
                   to={link.href}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    currentPath === link.href
-                      ? "bg-primary/10 text-primary"
+                    isActive(link.href)
+                      ? "bg-primary/10 text-primary font-semibold"
                       : "text-foreground/70 hover:text-foreground hover:bg-muted"
                   }`}
                 >
@@ -79,8 +88,8 @@ export default function Header() {
                 <Link
                   to="/dashboard"
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    currentPath === "/dashboard"
-                      ? "bg-primary/10 text-primary"
+                    isActive("/dashboard")
+                      ? "bg-primary/10 text-primary font-semibold"
                       : "text-foreground/70 hover:text-foreground hover:bg-muted"
                   }`}
                 >
@@ -91,8 +100,8 @@ export default function Header() {
                 <Link
                   to="/admin"
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    currentPath === "/admin"
-                      ? "bg-secondary/10 text-secondary"
+                    isActive("/admin")
+                      ? "bg-secondary/10 text-secondary font-semibold"
                       : "text-foreground/70 hover:text-foreground hover:bg-muted"
                   }`}
                 >
@@ -103,35 +112,36 @@ export default function Header() {
 
             {/* Right controls */}
             <div className="flex items-center gap-2">
-              {/* Language toggle */}
+              {/* Language toggle with flag accents */}
               <button
                 onClick={() => setLang(lang === "en" ? "hi" : "en")}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full border border-border text-xs font-semibold transition-smooth hover:bg-muted min-h-[44px] min-w-[44px] justify-center"
-                aria-label="Toggle language"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-semibold transition-smooth hover:bg-muted hover:border-primary/40 min-h-[36px] justify-center"
+                aria-label={
+                  lang === "en" ? "Switch to Hindi" : "Switch to English"
+                }
                 data-ocid="lang-toggle"
                 type="button"
               >
                 <span
-                  className={
-                    lang === "en" ? "text-primary" : "text-muted-foreground"
-                  }
+                  className={`transition-colors ${lang === "en" ? "text-primary font-bold" : "text-muted-foreground"}`}
                 >
                   EN
                 </span>
-                <span className="text-border">|</span>
+                <span className="text-border/60 select-none">|</span>
                 <span
-                  className={
-                    lang === "hi" ? "text-primary" : "text-muted-foreground"
-                  }
+                  className={`transition-colors text-hindi ${lang === "hi" ? "text-primary font-bold" : "text-muted-foreground"}`}
                 >
                   हिं
                 </span>
               </button>
 
-              {/* Auth buttons */}
+              {/* Auth buttons — desktop */}
               {isAuthenticated ? (
                 <div className="hidden md:flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground truncate max-w-[120px]">
+                  <span
+                    className="text-sm text-muted-foreground truncate max-w-[120px]"
+                    title={user?.name}
+                  >
                     {user?.name ?? t("nav.profile")}
                   </span>
                   <Button
@@ -148,17 +158,18 @@ export default function Header() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleLogin}
+                    onClick={login}
                     data-ocid="login-btn"
                   >
                     {t("nav.login")}
                   </Button>
                   <Button
                     size="sm"
-                    onClick={handleLogin}
+                    asChild
+                    className="gradient-saffron-accent text-primary-foreground border-0"
                     data-ocid="register-btn"
                   >
-                    {t("nav.register")}
+                    <Link to="/register">{t("nav.register")}</Link>
                   </Button>
                 </div>
               )}
@@ -179,7 +190,6 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Mobile Nav Drawer */}
       <MobileNav
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}

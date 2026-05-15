@@ -28,6 +28,10 @@ module {
     isVerified : Bool;
     isActive : Bool;
     createdAt : Types.Timestamp;
+    // Availability / contact-hiding fields (optional for backward-compatibility)
+    contactAvailabilityEnabled : ?Bool;
+    availableFrom : ?Text;
+    availableTo : ?Text;
   };
 
   public type ProviderInput = {
@@ -44,6 +48,10 @@ module {
     bioHi : Text;
     profileImage : ?Text;
     categoryIds : [Types.CategoryId];
+    // Availability fields (optional in input — keep defaults if omitted)
+    contactAvailabilityEnabled : ?Bool;
+    availableFrom : ?Text;
+    availableTo : ?Text;
   };
 
   public type ProviderSummary = {

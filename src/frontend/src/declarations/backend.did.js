@@ -9,6 +9,28 @@
 import { IDL } from '@icp-sdk/core/candid';
 
 export const ProviderId = IDL.Nat;
+export const ClassSubCategory = IDL.Variant({
+  'coaching' : IDL.Null,
+  'yoga' : IDL.Null,
+  'fitness' : IDL.Null,
+  'dhyan' : IDL.Null,
+});
+export const ClassVideoInput = IDL.Record({
+  'subCategory' : ClassSubCategory,
+  'title' : IDL.Text,
+  'description' : IDL.Text,
+  'fileKey' : IDL.Text,
+});
+export const ClassVideo = IDL.Record({
+  'id' : IDL.Nat,
+  'subCategory' : ClassSubCategory,
+  'title' : IDL.Text,
+  'description' : IDL.Text,
+  'isActive' : IDL.Bool,
+  'providerId' : ProviderId,
+  'uploadedAt' : IDL.Int,
+  'fileKey' : IDL.Text,
+});
 export const ReviewInput = IDL.Record({
   'comment' : IDL.Text,
   'rating' : IDL.Nat,
@@ -57,11 +79,14 @@ export const ProviderInput = IDL.Record({
   'businessName' : IDL.Text,
   'email' : IDL.Text,
   'state' : IDL.Text,
+  'availableFrom' : IDL.Opt(IDL.Text),
+  'contactAvailabilityEnabled' : IDL.Opt(IDL.Bool),
   'address' : IDL.Text,
   'bioEn' : IDL.Text,
   'bioHi' : IDL.Text,
   'phone' : IDL.Text,
   'servicesOffered' : IDL.Vec(ServiceOffered),
+  'availableTo' : IDL.Opt(IDL.Text),
   'serviceAreas' : IDL.Vec(IDL.Text),
   'categoryIds' : IDL.Vec(CategoryId),
 });
@@ -76,20 +101,40 @@ export const Provider = IDL.Record({
   'isActive' : IDL.Bool,
   'email' : IDL.Text,
   'state' : IDL.Text,
+  'availableFrom' : IDL.Opt(IDL.Text),
   'isVerified' : IDL.Bool,
+  'contactAvailabilityEnabled' : IDL.Opt(IDL.Bool),
   'address' : IDL.Text,
   'bioEn' : IDL.Text,
   'bioHi' : IDL.Text,
   'phone' : IDL.Text,
   'servicesOffered' : IDL.Vec(ServiceOffered),
+  'availableTo' : IDL.Opt(IDL.Text),
   'serviceAreas' : IDL.Vec(IDL.Text),
   'categoryIds' : IDL.Vec(CategoryId),
 });
 export const AdminStats = IDL.Record({
+  'avgPlatformRating' : IDL.Float64,
   'totalSeekers' : IDL.Nat,
   'totalProviders' : IDL.Nat,
+  'pendingProviderApprovals' : IDL.Nat,
   'totalCategories' : IDL.Nat,
+  'totalReviews' : IDL.Nat,
   'totalInquiries' : IDL.Nat,
+});
+export const ProviderSummary = IDL.Record({
+  'id' : ProviderId,
+  'ownerName' : IDL.Text,
+  'city' : IDL.Text,
+  'userId' : UserId,
+  'profileImage' : IDL.Opt(IDL.Text),
+  'businessName' : IDL.Text,
+  'isActive' : IDL.Bool,
+  'averageRating' : IDL.Float64,
+  'state' : IDL.Text,
+  'isVerified' : IDL.Bool,
+  'reviewCount' : IDL.Nat,
+  'categoryIds' : IDL.Vec(CategoryId),
 });
 export const InquiryId = IDL.Nat;
 export const InquiryStatus = IDL.Variant({
@@ -122,30 +167,40 @@ export const User = IDL.Record({
   'state' : IDL.Text,
   'phone' : IDL.Text,
 });
-export const ProviderFilter = IDL.Record({
-  'categoryId' : IDL.Opt(CategoryId),
-  'city' : IDL.Opt(IDL.Text),
-  'state' : IDL.Opt(IDL.Text),
-});
-export const ProviderSummary = IDL.Record({
-  'id' : ProviderId,
-  'ownerName' : IDL.Text,
-  'city' : IDL.Text,
-  'userId' : UserId,
-  'profileImage' : IDL.Opt(IDL.Text),
-  'businessName' : IDL.Text,
-  'isActive' : IDL.Bool,
-  'averageRating' : IDL.Float64,
-  'state' : IDL.Text,
-  'isVerified' : IDL.Bool,
-  'reviewCount' : IDL.Nat,
-  'categoryIds' : IDL.Vec(CategoryId),
-});
 export const Page = IDL.Record({
   'total' : IDL.Nat,
   'page' : IDL.Nat,
   'pageSize' : IDL.Nat,
   'items' : IDL.Vec(ProviderSummary),
+});
+export const ProviderFilter = IDL.Record({
+  'categoryId' : IDL.Opt(CategoryId),
+  'city' : IDL.Opt(IDL.Text),
+  'state' : IDL.Opt(IDL.Text),
+});
+export const OpenUserInput = IDL.Record({
+  'serviceCategory' : IDL.Text,
+  'city' : IDL.Text,
+  'name' : IDL.Text,
+  'role' : Role,
+  'email' : IDL.Text,
+  'state' : IDL.Text,
+  'phone' : IDL.Text,
+});
+export const OpenUserRecord = IDL.Record({
+  'id' : IDL.Nat,
+  'serviceCategory' : IDL.Text,
+  'city' : IDL.Text,
+  'name' : IDL.Text,
+  'createdAt' : Timestamp,
+  'role' : Role,
+  'email' : IDL.Text,
+  'state' : IDL.Text,
+  'phone' : IDL.Text,
+});
+export const OpenRegisterResult = IDL.Variant({
+  'ok' : OpenUserRecord,
+  'err' : IDL.Text,
 });
 export const UserInput = IDL.Record({
   'city' : IDL.Text,
@@ -153,6 +208,14 @@ export const UserInput = IDL.Record({
   'email' : IDL.Text,
   'state' : IDL.Text,
   'phone' : IDL.Text,
+});
+export const ProviderSearchFilter = IDL.Record({
+  'categoryId' : IDL.Opt(CategoryId),
+  'minRating' : IDL.Opt(IDL.Float64),
+  'city' : IDL.Opt(IDL.Text),
+  'state' : IDL.Opt(IDL.Text),
+  'isVerified' : IDL.Opt(IDL.Bool),
+  'searchQuery' : IDL.Opt(IDL.Text),
 });
 export const InquiryInput = IDL.Record({
   'serviceName' : IDL.Text,
@@ -170,25 +233,56 @@ export const UserUpdateInput = IDL.Record({
 });
 
 export const idlService = IDL.Service({
+  'addClassVideo' : IDL.Func([ProviderId, ClassVideoInput], [ClassVideo], []),
   'addReview' : IDL.Func([ReviewInput], [Review], []),
   'approveProvider' : IDL.Func([ProviderId], [IDL.Bool], []),
+  'checkContactAvailable' : IDL.Func(
+      [ProviderId, IDL.Text],
+      [IDL.Bool],
+      ['query'],
+    ),
   'createCategory' : IDL.Func([CategoryInput], [Category], []),
   'createProviderProfile' : IDL.Func([ProviderInput], [Provider], []),
   'deleteCategory' : IDL.Func([CategoryId], [IDL.Bool], []),
+  'deleteClassVideo' : IDL.Func([IDL.Nat, ProviderId], [IDL.Bool], []),
   'disableProvider' : IDL.Func([ProviderId], [IDL.Bool], []),
   'getAdminStats' : IDL.Func([], [AdminStats], ['query']),
   'getCategory' : IDL.Func([CategoryId], [IDL.Opt(Category)], ['query']),
+  'getClassVideoById' : IDL.Func([IDL.Nat], [IDL.Opt(ClassVideo)], ['query']),
+  'getClassVideosByProvider' : IDL.Func(
+      [ProviderId],
+      [IDL.Vec(ClassVideo)],
+      ['query'],
+    ),
+  'getClassVideosBySubCategory' : IDL.Func(
+      [ClassSubCategory],
+      [IDL.Vec(ClassVideo)],
+      ['query'],
+    ),
+  'getFeaturedProviders' : IDL.Func([], [IDL.Vec(ProviderSummary)], ['query']),
   'getInquiriesByProvider' : IDL.Func(
       [ProviderId],
       [IDL.Vec(Inquiry)],
       ['query'],
     ),
+  'getMyClassVideos' : IDL.Func([ProviderId], [IDL.Vec(ClassVideo)], ['query']),
   'getMyInquiries' : IDL.Func([], [IDL.Vec(Inquiry)], ['query']),
   'getMyProfile' : IDL.Func([], [IDL.Opt(User)], ['query']),
   'getMyProviderProfile' : IDL.Func([], [IDL.Opt(Provider)], ['query']),
   'getMyReviews' : IDL.Func([], [IDL.Vec(Review)], ['query']),
+  'getOpenUserCount' : IDL.Func([], [IDL.Nat], ['query']),
   'getProvider' : IDL.Func([ProviderId], [IDL.Opt(Provider)], ['query']),
+  'getProvidersByCategory' : IDL.Func(
+      [CategoryId, IDL.Nat, IDL.Nat],
+      [Page],
+      ['query'],
+    ),
   'getReviewsByProvider' : IDL.Func([ProviderId], [IDL.Vec(Review)], ['query']),
+  'getVisitorStats' : IDL.Func(
+      [],
+      [IDL.Record({ 'totalVisits' : IDL.Nat, 'uniqueVisitors' : IDL.Nat })],
+      ['query'],
+    ),
   'listAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
   'listCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
   'listProviders' : IDL.Func(
@@ -197,11 +291,27 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'listUsers' : IDL.Func([], [IDL.Vec(User)], ['query']),
+  'openRegisterUser' : IDL.Func([OpenUserInput], [OpenRegisterResult], []),
   'registerUser' : IDL.Func([UserInput], [User], []),
+  'searchProviders' : IDL.Func(
+      [ProviderSearchFilter, IDL.Nat, IDL.Nat],
+      [Page],
+      ['query'],
+    ),
   'seedSampleData' : IDL.Func([], [IDL.Bool], []),
   'setCategoryActive' : IDL.Func([CategoryId, IDL.Bool], [IDL.Bool], []),
   'setUserRole' : IDL.Func([UserId, Role], [IDL.Bool], []),
   'submitInquiry' : IDL.Func([InquiryInput], [Inquiry], []),
+  'toggleClassVideoActive' : IDL.Func(
+      [IDL.Nat, ProviderId],
+      [IDL.Opt(ClassVideo)],
+      [],
+    ),
+  'trackVisit' : IDL.Func(
+      [IDL.Text],
+      [IDL.Record({ 'totalVisits' : IDL.Nat, 'uniqueVisitors' : IDL.Nat })],
+      [],
+    ),
   'updateCategory' : IDL.Func(
       [CategoryId, CategoryInput],
       [IDL.Opt(Category)],
@@ -224,6 +334,28 @@ export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
   const ProviderId = IDL.Nat;
+  const ClassSubCategory = IDL.Variant({
+    'coaching' : IDL.Null,
+    'yoga' : IDL.Null,
+    'fitness' : IDL.Null,
+    'dhyan' : IDL.Null,
+  });
+  const ClassVideoInput = IDL.Record({
+    'subCategory' : ClassSubCategory,
+    'title' : IDL.Text,
+    'description' : IDL.Text,
+    'fileKey' : IDL.Text,
+  });
+  const ClassVideo = IDL.Record({
+    'id' : IDL.Nat,
+    'subCategory' : ClassSubCategory,
+    'title' : IDL.Text,
+    'description' : IDL.Text,
+    'isActive' : IDL.Bool,
+    'providerId' : ProviderId,
+    'uploadedAt' : IDL.Int,
+    'fileKey' : IDL.Text,
+  });
   const ReviewInput = IDL.Record({
     'comment' : IDL.Text,
     'rating' : IDL.Nat,
@@ -272,11 +404,14 @@ export const idlFactory = ({ IDL }) => {
     'businessName' : IDL.Text,
     'email' : IDL.Text,
     'state' : IDL.Text,
+    'availableFrom' : IDL.Opt(IDL.Text),
+    'contactAvailabilityEnabled' : IDL.Opt(IDL.Bool),
     'address' : IDL.Text,
     'bioEn' : IDL.Text,
     'bioHi' : IDL.Text,
     'phone' : IDL.Text,
     'servicesOffered' : IDL.Vec(ServiceOffered),
+    'availableTo' : IDL.Opt(IDL.Text),
     'serviceAreas' : IDL.Vec(IDL.Text),
     'categoryIds' : IDL.Vec(CategoryId),
   });
@@ -291,20 +426,40 @@ export const idlFactory = ({ IDL }) => {
     'isActive' : IDL.Bool,
     'email' : IDL.Text,
     'state' : IDL.Text,
+    'availableFrom' : IDL.Opt(IDL.Text),
     'isVerified' : IDL.Bool,
+    'contactAvailabilityEnabled' : IDL.Opt(IDL.Bool),
     'address' : IDL.Text,
     'bioEn' : IDL.Text,
     'bioHi' : IDL.Text,
     'phone' : IDL.Text,
     'servicesOffered' : IDL.Vec(ServiceOffered),
+    'availableTo' : IDL.Opt(IDL.Text),
     'serviceAreas' : IDL.Vec(IDL.Text),
     'categoryIds' : IDL.Vec(CategoryId),
   });
   const AdminStats = IDL.Record({
+    'avgPlatformRating' : IDL.Float64,
     'totalSeekers' : IDL.Nat,
     'totalProviders' : IDL.Nat,
+    'pendingProviderApprovals' : IDL.Nat,
     'totalCategories' : IDL.Nat,
+    'totalReviews' : IDL.Nat,
     'totalInquiries' : IDL.Nat,
+  });
+  const ProviderSummary = IDL.Record({
+    'id' : ProviderId,
+    'ownerName' : IDL.Text,
+    'city' : IDL.Text,
+    'userId' : UserId,
+    'profileImage' : IDL.Opt(IDL.Text),
+    'businessName' : IDL.Text,
+    'isActive' : IDL.Bool,
+    'averageRating' : IDL.Float64,
+    'state' : IDL.Text,
+    'isVerified' : IDL.Bool,
+    'reviewCount' : IDL.Nat,
+    'categoryIds' : IDL.Vec(CategoryId),
   });
   const InquiryId = IDL.Nat;
   const InquiryStatus = IDL.Variant({
@@ -337,30 +492,40 @@ export const idlFactory = ({ IDL }) => {
     'state' : IDL.Text,
     'phone' : IDL.Text,
   });
-  const ProviderFilter = IDL.Record({
-    'categoryId' : IDL.Opt(CategoryId),
-    'city' : IDL.Opt(IDL.Text),
-    'state' : IDL.Opt(IDL.Text),
-  });
-  const ProviderSummary = IDL.Record({
-    'id' : ProviderId,
-    'ownerName' : IDL.Text,
-    'city' : IDL.Text,
-    'userId' : UserId,
-    'profileImage' : IDL.Opt(IDL.Text),
-    'businessName' : IDL.Text,
-    'isActive' : IDL.Bool,
-    'averageRating' : IDL.Float64,
-    'state' : IDL.Text,
-    'isVerified' : IDL.Bool,
-    'reviewCount' : IDL.Nat,
-    'categoryIds' : IDL.Vec(CategoryId),
-  });
   const Page = IDL.Record({
     'total' : IDL.Nat,
     'page' : IDL.Nat,
     'pageSize' : IDL.Nat,
     'items' : IDL.Vec(ProviderSummary),
+  });
+  const ProviderFilter = IDL.Record({
+    'categoryId' : IDL.Opt(CategoryId),
+    'city' : IDL.Opt(IDL.Text),
+    'state' : IDL.Opt(IDL.Text),
+  });
+  const OpenUserInput = IDL.Record({
+    'serviceCategory' : IDL.Text,
+    'city' : IDL.Text,
+    'name' : IDL.Text,
+    'role' : Role,
+    'email' : IDL.Text,
+    'state' : IDL.Text,
+    'phone' : IDL.Text,
+  });
+  const OpenUserRecord = IDL.Record({
+    'id' : IDL.Nat,
+    'serviceCategory' : IDL.Text,
+    'city' : IDL.Text,
+    'name' : IDL.Text,
+    'createdAt' : Timestamp,
+    'role' : Role,
+    'email' : IDL.Text,
+    'state' : IDL.Text,
+    'phone' : IDL.Text,
+  });
+  const OpenRegisterResult = IDL.Variant({
+    'ok' : OpenUserRecord,
+    'err' : IDL.Text,
   });
   const UserInput = IDL.Record({
     'city' : IDL.Text,
@@ -368,6 +533,14 @@ export const idlFactory = ({ IDL }) => {
     'email' : IDL.Text,
     'state' : IDL.Text,
     'phone' : IDL.Text,
+  });
+  const ProviderSearchFilter = IDL.Record({
+    'categoryId' : IDL.Opt(CategoryId),
+    'minRating' : IDL.Opt(IDL.Float64),
+    'city' : IDL.Opt(IDL.Text),
+    'state' : IDL.Opt(IDL.Text),
+    'isVerified' : IDL.Opt(IDL.Bool),
+    'searchQuery' : IDL.Opt(IDL.Text),
   });
   const InquiryInput = IDL.Record({
     'serviceName' : IDL.Text,
@@ -385,27 +558,66 @@ export const idlFactory = ({ IDL }) => {
   });
   
   return IDL.Service({
+    'addClassVideo' : IDL.Func([ProviderId, ClassVideoInput], [ClassVideo], []),
     'addReview' : IDL.Func([ReviewInput], [Review], []),
     'approveProvider' : IDL.Func([ProviderId], [IDL.Bool], []),
+    'checkContactAvailable' : IDL.Func(
+        [ProviderId, IDL.Text],
+        [IDL.Bool],
+        ['query'],
+      ),
     'createCategory' : IDL.Func([CategoryInput], [Category], []),
     'createProviderProfile' : IDL.Func([ProviderInput], [Provider], []),
     'deleteCategory' : IDL.Func([CategoryId], [IDL.Bool], []),
+    'deleteClassVideo' : IDL.Func([IDL.Nat, ProviderId], [IDL.Bool], []),
     'disableProvider' : IDL.Func([ProviderId], [IDL.Bool], []),
     'getAdminStats' : IDL.Func([], [AdminStats], ['query']),
     'getCategory' : IDL.Func([CategoryId], [IDL.Opt(Category)], ['query']),
+    'getClassVideoById' : IDL.Func([IDL.Nat], [IDL.Opt(ClassVideo)], ['query']),
+    'getClassVideosByProvider' : IDL.Func(
+        [ProviderId],
+        [IDL.Vec(ClassVideo)],
+        ['query'],
+      ),
+    'getClassVideosBySubCategory' : IDL.Func(
+        [ClassSubCategory],
+        [IDL.Vec(ClassVideo)],
+        ['query'],
+      ),
+    'getFeaturedProviders' : IDL.Func(
+        [],
+        [IDL.Vec(ProviderSummary)],
+        ['query'],
+      ),
     'getInquiriesByProvider' : IDL.Func(
         [ProviderId],
         [IDL.Vec(Inquiry)],
+        ['query'],
+      ),
+    'getMyClassVideos' : IDL.Func(
+        [ProviderId],
+        [IDL.Vec(ClassVideo)],
         ['query'],
       ),
     'getMyInquiries' : IDL.Func([], [IDL.Vec(Inquiry)], ['query']),
     'getMyProfile' : IDL.Func([], [IDL.Opt(User)], ['query']),
     'getMyProviderProfile' : IDL.Func([], [IDL.Opt(Provider)], ['query']),
     'getMyReviews' : IDL.Func([], [IDL.Vec(Review)], ['query']),
+    'getOpenUserCount' : IDL.Func([], [IDL.Nat], ['query']),
     'getProvider' : IDL.Func([ProviderId], [IDL.Opt(Provider)], ['query']),
+    'getProvidersByCategory' : IDL.Func(
+        [CategoryId, IDL.Nat, IDL.Nat],
+        [Page],
+        ['query'],
+      ),
     'getReviewsByProvider' : IDL.Func(
         [ProviderId],
         [IDL.Vec(Review)],
+        ['query'],
+      ),
+    'getVisitorStats' : IDL.Func(
+        [],
+        [IDL.Record({ 'totalVisits' : IDL.Nat, 'uniqueVisitors' : IDL.Nat })],
         ['query'],
       ),
     'listAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
@@ -416,11 +628,27 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'listUsers' : IDL.Func([], [IDL.Vec(User)], ['query']),
+    'openRegisterUser' : IDL.Func([OpenUserInput], [OpenRegisterResult], []),
     'registerUser' : IDL.Func([UserInput], [User], []),
+    'searchProviders' : IDL.Func(
+        [ProviderSearchFilter, IDL.Nat, IDL.Nat],
+        [Page],
+        ['query'],
+      ),
     'seedSampleData' : IDL.Func([], [IDL.Bool], []),
     'setCategoryActive' : IDL.Func([CategoryId, IDL.Bool], [IDL.Bool], []),
     'setUserRole' : IDL.Func([UserId, Role], [IDL.Bool], []),
     'submitInquiry' : IDL.Func([InquiryInput], [Inquiry], []),
+    'toggleClassVideoActive' : IDL.Func(
+        [IDL.Nat, ProviderId],
+        [IDL.Opt(ClassVideo)],
+        [],
+      ),
+    'trackVisit' : IDL.Func(
+        [IDL.Text],
+        [IDL.Record({ 'totalVisits' : IDL.Nat, 'uniqueVisitors' : IDL.Nat })],
+        [],
+      ),
     'updateCategory' : IDL.Func(
         [CategoryId, CategoryInput],
         [IDL.Opt(Category)],

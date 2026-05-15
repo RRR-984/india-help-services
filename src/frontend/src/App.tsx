@@ -19,6 +19,7 @@ const AuthPage = lazy(() => import("./pages/Auth"));
 const DashboardPage = lazy(() => import("./pages/Dashboard"));
 const AdminPage = lazy(() => import("./pages/Admin"));
 const NotFoundPage = lazy(() => import("./pages/NotFound"));
+const RegisterPage = lazy(() => import("./pages/Register"));
 
 function PageLoader() {
   return <LoadingSpinner fullPage />;
@@ -113,6 +114,16 @@ const adminRoute = createRoute({
   ),
 });
 
+const registerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/register",
+  component: () => (
+    <Suspense fallback={<PageLoader />}>
+      <RegisterPage />
+    </Suspense>
+  ),
+});
+
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "*",
@@ -131,6 +142,7 @@ const routeTree = rootRoute.addChildren([
   providerDetailRoute,
   categoriesRoute,
   authRoute,
+  registerRoute,
   dashboardRoute,
   adminRoute,
   notFoundRoute,

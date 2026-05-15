@@ -11,9 +11,12 @@ import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
 export interface AdminStats {
+  'avgPlatformRating' : number,
   'totalSeekers' : bigint,
   'totalProviders' : bigint,
+  'pendingProviderApprovals' : bigint,
   'totalCategories' : bigint,
+  'totalReviews' : bigint,
   'totalInquiries' : bigint,
 }
 export interface BilingualText { 'en' : string, 'hi' : string }
@@ -33,6 +36,26 @@ export interface CategoryInput {
   'name' : BilingualText,
   'color' : string,
   'description' : BilingualText,
+}
+export type ClassSubCategory = { 'coaching' : null } |
+  { 'yoga' : null } |
+  { 'fitness' : null } |
+  { 'dhyan' : null };
+export interface ClassVideo {
+  'id' : bigint,
+  'subCategory' : ClassSubCategory,
+  'title' : string,
+  'description' : string,
+  'isActive' : boolean,
+  'providerId' : ProviderId,
+  'uploadedAt' : bigint,
+  'fileKey' : string,
+}
+export interface ClassVideoInput {
+  'subCategory' : ClassSubCategory,
+  'title' : string,
+  'description' : string,
+  'fileKey' : string,
 }
 export interface Inquiry {
   'id' : InquiryId,
@@ -54,6 +77,28 @@ export interface InquiryInput {
 export type InquiryStatus = { 'closed' : null } |
   { 'responded' : null } |
   { 'pending' : null };
+export type OpenRegisterResult = { 'ok' : OpenUserRecord } |
+  { 'err' : string };
+export interface OpenUserInput {
+  'serviceCategory' : string,
+  'city' : string,
+  'name' : string,
+  'role' : Role,
+  'email' : string,
+  'state' : string,
+  'phone' : string,
+}
+export interface OpenUserRecord {
+  'id' : bigint,
+  'serviceCategory' : string,
+  'city' : string,
+  'name' : string,
+  'createdAt' : Timestamp,
+  'role' : Role,
+  'email' : string,
+  'state' : string,
+  'phone' : string,
+}
 export interface Page {
   'total' : bigint,
   'page' : bigint,
@@ -71,12 +116,15 @@ export interface Provider {
   'isActive' : boolean,
   'email' : string,
   'state' : string,
+  'availableFrom' : [] | [string],
   'isVerified' : boolean,
+  'contactAvailabilityEnabled' : [] | [boolean],
   'address' : string,
   'bioEn' : string,
   'bioHi' : string,
   'phone' : string,
   'servicesOffered' : Array<ServiceOffered>,
+  'availableTo' : [] | [string],
   'serviceAreas' : Array<string>,
   'categoryIds' : Array<CategoryId>,
 }
@@ -93,13 +141,24 @@ export interface ProviderInput {
   'businessName' : string,
   'email' : string,
   'state' : string,
+  'availableFrom' : [] | [string],
+  'contactAvailabilityEnabled' : [] | [boolean],
   'address' : string,
   'bioEn' : string,
   'bioHi' : string,
   'phone' : string,
   'servicesOffered' : Array<ServiceOffered>,
+  'availableTo' : [] | [string],
   'serviceAreas' : Array<string>,
   'categoryIds' : Array<CategoryId>,
+}
+export interface ProviderSearchFilter {
+  'categoryId' : [] | [CategoryId],
+  'minRating' : [] | [number],
+  'city' : [] | [string],
+  'state' : [] | [string],
+  'isVerified' : [] | [boolean],
+  'searchQuery' : [] | [string],
 }
 export interface ProviderSummary {
   'id' : ProviderId,
@@ -167,30 +226,57 @@ export interface UserUpdateInput {
   'phone' : string,
 }
 export interface _SERVICE {
+  'addClassVideo' : ActorMethod<[ProviderId, ClassVideoInput], ClassVideo>,
   'addReview' : ActorMethod<[ReviewInput], Review>,
   'approveProvider' : ActorMethod<[ProviderId], boolean>,
+  'checkContactAvailable' : ActorMethod<[ProviderId, string], boolean>,
   'createCategory' : ActorMethod<[CategoryInput], Category>,
   'createProviderProfile' : ActorMethod<[ProviderInput], Provider>,
   'deleteCategory' : ActorMethod<[CategoryId], boolean>,
+  'deleteClassVideo' : ActorMethod<[bigint, ProviderId], boolean>,
   'disableProvider' : ActorMethod<[ProviderId], boolean>,
   'getAdminStats' : ActorMethod<[], AdminStats>,
   'getCategory' : ActorMethod<[CategoryId], [] | [Category]>,
+  'getClassVideoById' : ActorMethod<[bigint], [] | [ClassVideo]>,
+  'getClassVideosByProvider' : ActorMethod<[ProviderId], Array<ClassVideo>>,
+  'getClassVideosBySubCategory' : ActorMethod<
+    [ClassSubCategory],
+    Array<ClassVideo>
+  >,
+  'getFeaturedProviders' : ActorMethod<[], Array<ProviderSummary>>,
   'getInquiriesByProvider' : ActorMethod<[ProviderId], Array<Inquiry>>,
+  'getMyClassVideos' : ActorMethod<[ProviderId], Array<ClassVideo>>,
   'getMyInquiries' : ActorMethod<[], Array<Inquiry>>,
   'getMyProfile' : ActorMethod<[], [] | [User]>,
   'getMyProviderProfile' : ActorMethod<[], [] | [Provider]>,
   'getMyReviews' : ActorMethod<[], Array<Review>>,
+  'getOpenUserCount' : ActorMethod<[], bigint>,
   'getProvider' : ActorMethod<[ProviderId], [] | [Provider]>,
+  'getProvidersByCategory' : ActorMethod<[CategoryId, bigint, bigint], Page>,
   'getReviewsByProvider' : ActorMethod<[ProviderId], Array<Review>>,
+  'getVisitorStats' : ActorMethod<
+    [],
+    { 'totalVisits' : bigint, 'uniqueVisitors' : bigint }
+  >,
   'listAllCategories' : ActorMethod<[], Array<Category>>,
   'listCategories' : ActorMethod<[], Array<Category>>,
   'listProviders' : ActorMethod<[ProviderFilter, bigint, bigint], Page>,
   'listUsers' : ActorMethod<[], Array<User>>,
+  'openRegisterUser' : ActorMethod<[OpenUserInput], OpenRegisterResult>,
   'registerUser' : ActorMethod<[UserInput], User>,
+  'searchProviders' : ActorMethod<[ProviderSearchFilter, bigint, bigint], Page>,
   'seedSampleData' : ActorMethod<[], boolean>,
   'setCategoryActive' : ActorMethod<[CategoryId, boolean], boolean>,
   'setUserRole' : ActorMethod<[UserId, Role], boolean>,
   'submitInquiry' : ActorMethod<[InquiryInput], Inquiry>,
+  'toggleClassVideoActive' : ActorMethod<
+    [bigint, ProviderId],
+    [] | [ClassVideo]
+  >,
+  'trackVisit' : ActorMethod<
+    [string],
+    { 'totalVisits' : bigint, 'uniqueVisitors' : bigint }
+  >,
   'updateCategory' : ActorMethod<[CategoryId, CategoryInput], [] | [Category]>,
   'updateInquiryStatus' : ActorMethod<
     [InquiryId, InquiryStatus],

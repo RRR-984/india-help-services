@@ -1,4 +1,4 @@
-import type { backendInterface, Category, User, Provider, ProviderSummary, Page, Inquiry, Review, AdminStats } from "../backend";
+import type { backendInterface, Category, User, Provider, ProviderSummary, Page, Inquiry, Review, AdminStats, OpenUserInput, OpenUserRecord } from "../backend";
 import { InquiryStatus, Role } from "../backend";
 import { Principal } from "@icp-sdk/core/principal";
 
@@ -164,29 +164,36 @@ const sampleAdminStats: AdminStats = {
   totalProviders: BigInt(348),
   totalCategories: BigInt(10),
   totalInquiries: BigInt(5670),
+  avgPlatformRating: 4.8,
+  pendingProviderApprovals: BigInt(12),
+  totalReviews: BigInt(890),
 };
 
 export const mockBackend: backendInterface = {
   addReview: async (_input) => ({ id: BigInt(3), createdAt: BigInt(Date.now()), seekerId: samplePrincipal, comment: _input.comment, rating: _input.rating, providerId: _input.providerId }),
   approveProvider: async (_id) => true,
+  checkContactAvailable: async (_providerId, _currentHHMM) => true,
   createCategory: async (input) => ({ id: BigInt(7), displayOrder: input.displayOrder, icon: input.icon, name: input.name, color: input.color, description: input.description, isActive: true }),
   createProviderProfile: async (_input) => sampleProvider,
   deleteCategory: async (_id) => true,
   disableProvider: async (_id) => true,
   getAdminStats: async () => sampleAdminStats,
   getCategory: async (_id) => sampleCategories[0],
+  getFeaturedProviders: async () => sampleProviders,
   getInquiriesByProvider: async (_providerId) => [sampleInquiry],
   getMyInquiries: async () => [sampleInquiry],
   getMyProfile: async () => sampleUser,
   getMyProviderProfile: async () => sampleProvider,
   getMyReviews: async () => sampleReviews,
   getProvider: async (_id) => sampleProvider,
+  getProvidersByCategory: async (_categoryId, _page, _pageSize) => samplePage,
   getReviewsByProvider: async (_providerId) => sampleReviews,
   listAllCategories: async () => sampleCategories,
   listCategories: async () => sampleCategories,
   listProviders: async (_filter, _page, _pageSize) => samplePage,
   listUsers: async () => [sampleUser],
   registerUser: async (input) => ({ ...sampleUser, name: input.name, email: input.email, city: input.city, state: input.state, phone: input.phone }),
+  searchProviders: async (_filter, _page, _pageSize) => samplePage,
   seedSampleData: async () => true,
   setCategoryActive: async (_id, _isActive) => true,
   setUserRole: async (_userId, _role) => true,
@@ -195,4 +202,28 @@ export const mockBackend: backendInterface = {
   updateInquiryStatus: async (_id, status) => ({ ...sampleInquiry, status }),
   updateProviderProfile: async (_id, _input) => sampleProvider,
   updateUserProfile: async (input) => ({ ...sampleUser, name: input.name, email: input.email, city: input.city, state: input.state, phone: input.phone }),
+  openRegisterUser: async (input: OpenUserInput) => {
+    const record: OpenUserRecord = {
+      id: BigInt(Date.now()),
+      name: input.name,
+      email: input.email,
+      city: input.city,
+      state: input.state,
+      phone: input.phone,
+      role: input.role,
+      serviceCategory: input.serviceCategory,
+      createdAt: BigInt(Date.now()),
+    };
+    return { __kind__: "ok" as const, ok: record };
+  },
+  getOpenUserCount: async () => BigInt(42),
+  trackVisit: async (_visitorId: string) => ({ totalVisits: BigInt(1234), uniqueVisitors: BigInt(567) }),
+  getVisitorStats: async () => ({ totalVisits: BigInt(1234), uniqueVisitors: BigInt(567) }),
+  addClassVideo: async (_providerId, input) => ({ id: BigInt(1), subCategory: input.subCategory, title: input.title, description: input.description, isActive: true, providerId: _providerId, uploadedAt: BigInt(Date.now()), fileKey: input.fileKey }),
+  deleteClassVideo: async (_videoId, _providerId) => true,
+  getClassVideoById: async (_videoId) => null,
+  getClassVideosByProvider: async (_providerId) => [],
+  getClassVideosBySubCategory: async (_subCategory) => [],
+  getMyClassVideos: async (_providerId) => [],
+  toggleClassVideoActive: async (_videoId, _providerId) => null,
 };

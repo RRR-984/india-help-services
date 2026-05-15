@@ -100,6 +100,7 @@ module {
       ("Travel & Transport", "यात्रा और परिवहन", "Taxi, bus, train, travel agents, tour packages, and logistics.", "टैक्सी, बस, ट्रेन, ट्रैवल एजेंट, टूर पैकेज और लॉजिस्टिक्स।", "✈️", "#009688", 8),
       ("Business Services", "व्यापार सेवाएं", "Accounting, registration, GST, marketing, and business consulting.", "लेखांकन, पंजीकरण, GST, मार्केटिंग और व्यापार परामर्श।", "💼", "#795548", 9),
       ("Emergency Services", "आपातकालीन सेवाएं", "Police, fire brigade, ambulance, disaster relief, and crisis support.", "पुलिस, अग्निशमन, एम्बुलेंस, आपदा राहत और संकट सहायता।", "🚨", "#F44336", 10),
+      ("Online Classes", "ऑनलाइन कक्षाएं", "Yoga, meditation, fitness, coaching, and online learning classes.", "योगा, ध्यान, फिटनेस, कोचिंग और ऑनलाइन शिक्षा कक्षाएं।", "🎓", "#8B5CF6", 11),
     ];
 
     var id = startId;

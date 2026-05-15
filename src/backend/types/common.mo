@@ -32,9 +32,20 @@ module {
     pageSize : Nat;
   };
 
+  // Basic location/category filter (backward-compatible)
   public type ProviderFilter = {
     categoryId : ?CategoryId;
     state : ?Text;
     city : ?Text;
+  };
+
+  // Extended search filter with text query, rating, and verified flag
+  public type ProviderSearchFilter = {
+    searchQuery : ?Text;     // partial match on name / businessName / services
+    categoryId : ?CategoryId;
+    state : ?Text;
+    city : ?Text;
+    minRating : ?Float;
+    isVerified : ?Bool;
   };
 };

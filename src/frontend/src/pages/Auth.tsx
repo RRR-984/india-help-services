@@ -39,7 +39,7 @@ import { useLanguage } from "../hooks/use-language";
 import { INDIAN_STATES } from "../services/backend-api";
 import type { UserInput } from "../types";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Step = "login" | "profile" | "provider-details" | "done";
 type RoleChoice = "seeker" | "provider";
@@ -68,7 +68,6 @@ const emptyProfile: ProfileFormData = {
   city: "",
   role: "seeker",
 };
-
 const emptyProvider: ProviderFormData = {
   businessName: "",
   servicesOffered: "",
@@ -76,7 +75,7 @@ const emptyProvider: ProviderFormData = {
   bioHi: "",
 };
 
-// ─── Validation helpers ──────────────────────────────────────────────────────
+// ─── Validation ───────────────────────────────────────────────────────────────
 
 function validateProfile(
   data: ProfileFormData,
@@ -114,7 +113,22 @@ function validateProvider(
   return errors;
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return <p className="text-xs text-destructive mt-1">{msg}</p>;
+}
+
+function TricolorBar() {
+  return (
+    <div className="h-1 w-full flex">
+      <div className="flex-1 bg-primary" />
+      <div className="flex-1 bg-card" />
+      <div className="flex-1 bg-secondary" />
+    </div>
+  );
+}
 
 function StepIndicator({ step }: { step: Step }) {
   const stepOrder: Step[] = ["login", "profile", "provider-details", "done"];
@@ -151,9 +165,7 @@ function StepIndicator({ step }: { step: Step }) {
             </div>
             {i < visibleSteps.length - 1 && (
               <div
-                className={`h-0.5 w-8 transition-smooth ${
-                  reallyDone ? "bg-secondary" : "bg-border"
-                }`}
+                className={`h-0.5 w-8 transition-smooth ${reallyDone ? "bg-secondary" : "bg-border"}`}
               />
             )}
           </div>
@@ -163,17 +175,81 @@ function StepIndicator({ step }: { step: Step }) {
   );
 }
 
-function FieldError({ msg }: { msg?: string }) {
-  if (!msg) return null;
-  return <p className="text-xs text-destructive mt-1">{msg}</p>;
-}
+// ─── Hero Panel (left side on desktop) ───────────────────────────────────────
 
-function TricolorBar() {
+function HeroPanel({ lang }: { lang: "en" | "hi" }) {
+  const features = [
+    { icon: "🏛️", en: "Government Services", hi: "सरकारी सेवाएं" },
+    { icon: "⚖️", en: "Legal Assistance", hi: "कानूनी सहायता" },
+    { icon: "🏥", en: "Medical Support", hi: "चिकित्सा सहायता" },
+    { icon: "💼", en: "Business Services", hi: "व्यापार सेवाएं" },
+    { icon: "📚", en: "Educational Help", hi: "शैक्षिक सहायता" },
+  ];
+
   return (
-    <div className="h-1 w-full flex">
-      <div className="flex-1 bg-primary" />
-      <div className="flex-1 bg-card" />
-      <div className="flex-1 bg-secondary" />
+    <div className="hidden lg:flex flex-col justify-between p-10 gradient-saffron-accent text-primary-foreground rounded-l-2xl">
+      <div>
+        {/* Logo area */}
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center text-xl">
+            🇮🇳
+          </div>
+          <div>
+            <p className="font-display font-bold text-lg leading-tight">
+              All India
+            </p>
+            <p className="text-primary-foreground/80 text-sm">Help Services</p>
+          </div>
+        </div>
+
+        {/* Headline */}
+        <h2 className="font-display font-bold text-3xl leading-tight mb-3">
+          {lang === "hi"
+            ? "भारत की सेवाएं,\nआपके द्वार"
+            : "Trusted Services\nAcross India"}
+        </h2>
+        <p className="text-primary-foreground/80 text-sm leading-relaxed mb-8">
+          {lang === "hi"
+            ? "हजारों विश्वसनीय सेवा प्रदाताओं से जुड़ें। सरकारी, कानूनी, चिकित्सा और व्यापारिक सेवाएं एक जगह।"
+            : "Connect with thousands of verified service providers. Government, legal, medical, and business services — all in one place."}
+        </p>
+
+        {/* Feature list */}
+        <ul className="space-y-3">
+          {features.map((f) => (
+            <li key={f.en} className="flex items-center gap-3 text-sm">
+              <span className="text-xl">{f.icon}</span>
+              <span className="text-primary-foreground/90">
+                {lang === "hi" ? f.hi : f.en}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Bottom trust strip */}
+      <div className="mt-8 pt-6 border-t border-primary-foreground/20">
+        <div className="flex flex-wrap gap-3">
+          {[
+            {
+              icon: "🔒",
+              label: lang === "hi" ? "100% सुरक्षित" : "100% Secure",
+            },
+            {
+              icon: "✅",
+              label: lang === "hi" ? "सत्यापित प्रदाता" : "Verified Providers",
+            },
+            { icon: "🌐", label: lang === "hi" ? "पूरा भारत" : "Pan India" },
+          ].map((b) => (
+            <span
+              key={b.label}
+              className="flex items-center gap-1.5 text-xs text-primary-foreground/80 bg-primary-foreground/10 px-3 py-1.5 rounded-full"
+            >
+              {b.icon} {b.label}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -206,7 +282,6 @@ export default function AuthPage() {
     Partial<Record<keyof ProviderFormData, string>>
   >({});
 
-  // Navigate on authentication state changes
   useEffect(() => {
     if (!isAuthenticated || profileLoading) return;
     if (myProfile) {
@@ -219,8 +294,6 @@ export default function AuthPage() {
       setStep("profile");
     }
   }, [isAuthenticated, myProfile, profileLoading, action, navigate]);
-
-  // ── Handlers ────────────────────────────────────────────────────────────────
 
   function handleProfileChange(field: keyof ProfileFormData, value: string) {
     setProfileData((p) => ({ ...p, [field]: value }));
@@ -309,8 +382,6 @@ export default function AuthPage() {
     }
   }
 
-  // ── Loading state ────────────────────────────────────────────────────────────
-
   if (authLoading || profileLoading) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center">
@@ -322,8 +393,7 @@ export default function AuthPage() {
     );
   }
 
-  // ── Already has profile (login action) ──────────────────────────────────────
-
+  // Already logged in with profile
   if (isAuthenticated && myProfile && action === "login") {
     return (
       <div className="min-h-[70vh] flex items-center justify-center px-4 py-12">
@@ -403,556 +473,594 @@ export default function AuthPage() {
     );
   }
 
-  // ─── Main Auth flow ───────────────────────────────────────────────────────────
-
+  // Main auth flow — split layout on desktop
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 bg-muted/20">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -16 }}
-          transition={{ duration: 0.3 }}
-          className="w-full max-w-lg"
-        >
-          {/* ── Login step ────────────────────────────────────────────────────── */}
-          {step === "login" && (
-            <Card className="border-2 border-primary/30 shadow-elevated overflow-hidden">
+    <div className="min-h-[80vh] flex items-center justify-center px-4 py-10 bg-muted/20">
+      <div className="w-full max-w-4xl">
+        <div className="grid lg:grid-cols-2 rounded-2xl overflow-hidden shadow-elevated border border-border">
+          {/* Left: Saffron hero panel */}
+          <HeroPanel lang={lang} />
+
+          {/* Right: Form panel */}
+          <div className="bg-card p-6 sm:p-8">
+            {/* Mobile tricolor bar */}
+            <div className="lg:hidden mb-6">
               <TricolorBar />
-              <CardHeader className="text-center pt-8 pb-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                  <Fingerprint className="w-8 h-8 text-primary" />
-                </div>
-                <h1 className="text-2xl font-display font-bold text-foreground">
-                  {action === "register"
-                    ? t("auth.registerTitle")
-                    : t("auth.loginTitle")}
-                </h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {lang === "hi"
-                    ? "इंटरनेट आइडेंटिटी से सुरक्षित लॉगिन"
-                    : "Sign in securely with Internet Identity"}
-                </p>
-              </CardHeader>
+            </div>
 
-              <CardContent className="space-y-6 pb-8">
-                {/* II explanation */}
-                <div className="bg-muted/40 rounded-lg p-4 flex gap-3">
-                  <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {lang === "hi"
-                        ? "इंटरनेट आइडेंटिटी क्या है?"
-                        : "What is Internet Identity?"}
-                    </p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {lang === "hi"
-                        ? "यह एक सुरक्षित, पासवर्ड-रहित लॉगिन प्रणाली है। आपकी पहचान सुरक्षित रहती है और कोई व्यक्तिगत डेटा साझा नहीं होता।"
-                        : "A secure, password-free login built on blockchain. Your identity stays private — no personal data is shared with third parties."}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Trust badges */}
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {(
-                    [
-                      {
-                        Icon: Shield,
-                        label: lang === "hi" ? "100% सुरक्षित" : "100% Secure",
-                      },
-                      {
-                        Icon: Fingerprint,
-                        label: lang === "hi" ? "पासवर्ड नहीं" : "No Password",
-                      },
-                      {
-                        Icon: CheckCircle2,
-                        label: lang === "hi" ? "तुरंत एक्सेस" : "Instant Access",
-                      },
-                    ] as const
-                  ).map(({ Icon, label }) => (
-                    <span
-                      key={label}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/8 text-primary text-xs font-medium border border-primary/20"
-                    >
-                      <Icon className="w-3 h-3" />
-                      {label}
-                    </span>
-                  ))}
-                </div>
-
-                <Separator />
-
-                <Button
-                  size="lg"
-                  className="w-full text-base font-semibold gap-2"
-                  onClick={login}
-                  disabled={authLoading}
-                  data-ocid="auth-ii-login-btn"
-                >
-                  <Fingerprint className="w-5 h-5" />
-                  {authLoading ? t("auth.loggingIn") : t("auth.loginWithII")}
-                </Button>
-
-                <p className="text-center text-xs text-muted-foreground">
-                  {lang === "hi"
-                    ? "लॉगिन करके आप हमारी सेवा शर्तों से सहमत हैं"
-                    : "By continuing, you agree to our Terms of Service"}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ── Profile step ──────────────────────────────────────────────────── */}
-          {step === "profile" && (
-            <Card className="border-2 border-primary/30 shadow-elevated overflow-hidden">
-              <TricolorBar />
-              <CardHeader className="pt-6 pb-2">
-                <StepIndicator step={step} />
-                <h1 className="text-xl font-display font-bold text-foreground text-center">
-                  {lang === "hi"
-                    ? "अपनी प्रोफाइल पूरी करें"
-                    : "Complete Your Profile"}
-                </h1>
-                <p className="text-sm text-muted-foreground text-center">
-                  {lang === "hi"
-                    ? "आपकी जानकारी सुरक्षित रहेगी"
-                    : "Your information is kept private and secure"}
-                </p>
-              </CardHeader>
-
-              <CardContent className="pb-8">
-                <form
-                  onSubmit={handleProfileSubmit}
-                  noValidate
-                  className="space-y-4"
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="p-name" className="text-sm font-medium">
-                        {t("auth.name")}{" "}
-                        <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="p-name"
-                        placeholder={
-                          lang === "hi" ? "जैसे: राम शर्मा" : "e.g. Ramesh Sharma"
-                        }
-                        value={profileData.name}
-                        onChange={(e) =>
-                          handleProfileChange("name", e.target.value)
-                        }
-                        className={
-                          profileErrors.name ? "border-destructive" : ""
-                        }
-                        data-ocid="auth-name-input"
-                      />
-                      <FieldError msg={profileErrors.name} />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={step}
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.25 }}
+              >
+                {/* ── Login step ──────────────────────────────────────────────── */}
+                {step === "login" && (
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <div className="w-14 h-14 mx-auto rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                        <Fingerprint className="w-7 h-7 text-primary" />
+                      </div>
+                      <h1 className="text-2xl font-display font-bold text-foreground">
+                        {action === "register"
+                          ? t("auth.registerTitle")
+                          : t("auth.loginTitle")}
+                      </h1>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {lang === "hi"
+                          ? "इंटरनेट आइडेंटिटी से सुरक्षित लॉगिन"
+                          : "Sign in securely with Internet Identity"}
+                      </p>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="p-email" className="text-sm font-medium">
-                        {t("auth.email")}{" "}
-                        <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="p-email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={profileData.email}
-                        onChange={(e) =>
-                          handleProfileChange("email", e.target.value)
-                        }
-                        className={
-                          profileErrors.email ? "border-destructive" : ""
-                        }
-                        data-ocid="auth-email-input"
-                      />
-                      <FieldError msg={profileErrors.email} />
-                    </div>
-                  </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="p-phone" className="text-sm font-medium">
-                      {t("auth.phone")}{" "}
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="p-phone"
-                      type="tel"
-                      placeholder={
-                        lang === "hi"
-                          ? "10-अंकीय मोबाइल नंबर"
-                          : "10-digit mobile number"
-                      }
-                      value={profileData.phone}
-                      maxLength={10}
-                      onChange={(e) =>
-                        handleProfileChange(
-                          "phone",
-                          e.target.value.replace(/\D/g, ""),
-                        )
-                      }
-                      className={
-                        profileErrors.phone ? "border-destructive" : ""
-                      }
-                      data-ocid="auth-phone-input"
-                    />
-                    <FieldError msg={profileErrors.phone} />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium">
-                        {t("auth.state")}{" "}
-                        <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={profileData.state}
-                        onValueChange={(v) => handleProfileChange("state", v)}
-                      >
-                        <SelectTrigger
-                          className={
-                            profileErrors.state ? "border-destructive" : ""
-                          }
-                          data-ocid="auth-state-select"
-                        >
-                          <SelectValue
-                            placeholder={
-                              lang === "hi" ? "राज्य चुनें" : "Select state"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {INDIAN_STATES.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {s}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FieldError msg={profileErrors.state} />
+                    {/* II info box */}
+                    <div className="bg-muted/40 rounded-lg p-4 flex gap-3">
+                      <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {lang === "hi"
+                            ? "इंटरनेट आइडेंटिटी क्या है?"
+                            : "What is Internet Identity?"}
+                        </p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {lang === "hi"
+                            ? "यह एक सुरक्षित, पासवर्ड-रहित लॉगिन प्रणाली है। आपकी पहचान सुरक्षित रहती है।"
+                            : "A secure, password-free login built on blockchain. Your identity stays private."}
+                        </p>
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="p-city" className="text-sm font-medium">
-                        {t("auth.city")}{" "}
-                        <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="p-city"
-                        placeholder={lang === "hi" ? "जैसे: मुंबई" : "e.g. Mumbai"}
-                        value={profileData.city}
-                        onChange={(e) =>
-                          handleProfileChange("city", e.target.value)
-                        }
-                        className={
-                          profileErrors.city ? "border-destructive" : ""
-                        }
-                        data-ocid="auth-city-input"
-                      />
-                      <FieldError msg={profileErrors.city} />
-                    </div>
-                  </div>
 
-                  {/* Role selection cards */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      {lang === "hi" ? "आप क्या हैं?" : "I am a..."}
-                      <span className="text-destructive ml-1">*</span>
-                    </Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Trust badges */}
+                    <div className="flex flex-wrap gap-2 justify-center">
                       {(
                         [
                           {
-                            value: "seeker" as RoleChoice,
-                            Icon: User,
-                            titleEn: "Service Seeker",
-                            titleHi: "सेवा खोजने वाला",
-                            descEn: "I need to find and hire service providers",
-                            descHi: "मुझे सेवाएं खोजनी और लेनी हैं",
+                            Icon: Shield,
+                            label:
+                              lang === "hi" ? "100% सुरक्षित" : "100% Secure",
                           },
                           {
-                            value: "provider" as RoleChoice,
-                            Icon: Wrench,
-                            titleEn: "Service Provider",
-                            titleHi: "सेवा प्रदाता",
-                            descEn: "I offer services and want clients",
-                            descHi: "मैं सेवाएं देता/देती हूं",
+                            Icon: Fingerprint,
+                            label: lang === "hi" ? "पासवर्ड नहीं" : "No Password",
+                          },
+                          {
+                            Icon: CheckCircle2,
+                            label:
+                              lang === "hi" ? "तुरंत एक्सेस" : "Instant Access",
                           },
                         ] as const
-                      ).map(
-                        ({ value, Icon, titleEn, titleHi, descEn, descHi }) => (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => handleProfileChange("role", value)}
-                            data-ocid={`auth-role-${value}`}
-                            className={`p-4 rounded-xl border-2 text-left transition-smooth focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                              profileData.role === value
-                                ? value === "seeker"
-                                  ? "border-primary bg-primary/5"
-                                  : "border-secondary bg-secondary/5"
-                                : "border-border hover:border-muted-foreground/40"
-                            }`}
+                      ).map(({ Icon, label }) => (
+                        <span
+                          key={label}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/8 text-primary text-xs font-medium border border-primary/20"
+                        >
+                          <Icon className="w-3 h-3" />
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+
+                    <Separator />
+
+                    <Button
+                      size="lg"
+                      className="w-full text-base font-semibold gap-2"
+                      onClick={login}
+                      disabled={authLoading}
+                      data-ocid="auth-ii-login-btn"
+                    >
+                      <Fingerprint className="w-5 h-5" />
+                      {authLoading
+                        ? t("auth.loggingIn")
+                        : t("auth.loginWithII")}
+                    </Button>
+
+                    <p className="text-center text-xs text-muted-foreground">
+                      {lang === "hi"
+                        ? "लॉगिन करके आप हमारी सेवा शर्तों से सहमत हैं"
+                        : "By continuing, you agree to our Terms of Service"}
+                    </p>
+                  </div>
+                )}
+
+                {/* ── Profile step ─────────────────────────────────────────────── */}
+                {step === "profile" && (
+                  <div>
+                    <StepIndicator step={step} />
+                    <div className="text-center mb-6">
+                      <h1 className="text-xl font-display font-bold text-foreground">
+                        {lang === "hi"
+                          ? "अपनी प्रोफाइल पूरी करें"
+                          : "Complete Your Profile"}
+                      </h1>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {lang === "hi"
+                          ? "आपकी जानकारी सुरक्षित रहेगी"
+                          : "Your information is kept private and secure"}
+                      </p>
+                    </div>
+
+                    <form
+                      onSubmit={handleProfileSubmit}
+                      noValidate
+                      className="space-y-4"
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor="p-name"
+                            className="text-sm font-medium"
                           >
-                            <div className="flex items-start gap-3">
-                              <div
-                                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                            {t("auth.name")}{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="p-name"
+                            placeholder={
+                              lang === "hi"
+                                ? "जैसे: राम शर्मा"
+                                : "e.g. Ramesh Sharma"
+                            }
+                            value={profileData.name}
+                            onChange={(e) =>
+                              handleProfileChange("name", e.target.value)
+                            }
+                            className={
+                              profileErrors.name ? "border-destructive" : ""
+                            }
+                            data-ocid="auth-name-input"
+                          />
+                          <FieldError msg={profileErrors.name} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor="p-email"
+                            className="text-sm font-medium"
+                          >
+                            {t("auth.email")}{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="p-email"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={profileData.email}
+                            onChange={(e) =>
+                              handleProfileChange("email", e.target.value)
+                            }
+                            className={
+                              profileErrors.email ? "border-destructive" : ""
+                            }
+                            data-ocid="auth-email-input"
+                          />
+                          <FieldError msg={profileErrors.email} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="p-phone"
+                          className="text-sm font-medium"
+                        >
+                          {t("auth.phone")}{" "}
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id="p-phone"
+                          type="tel"
+                          placeholder={
+                            lang === "hi"
+                              ? "10-अंकीय मोबाइल नंबर"
+                              : "10-digit mobile number"
+                          }
+                          value={profileData.phone}
+                          maxLength={10}
+                          onChange={(e) =>
+                            handleProfileChange(
+                              "phone",
+                              e.target.value.replace(/\D/g, ""),
+                            )
+                          }
+                          className={
+                            profileErrors.phone ? "border-destructive" : ""
+                          }
+                          data-ocid="auth-phone-input"
+                        />
+                        <FieldError msg={profileErrors.phone} />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-medium">
+                            {t("auth.state")}{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <Select
+                            value={profileData.state}
+                            onValueChange={(v) =>
+                              handleProfileChange("state", v)
+                            }
+                          >
+                            <SelectTrigger
+                              className={
+                                profileErrors.state ? "border-destructive" : ""
+                              }
+                              data-ocid="auth-state-select"
+                            >
+                              <SelectValue
+                                placeholder={
+                                  lang === "hi" ? "राज्य चुनें" : "Select state"
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {INDIAN_STATES.map((s) => (
+                                <SelectItem key={s} value={s}>
+                                  {s}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FieldError msg={profileErrors.state} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor="p-city"
+                            className="text-sm font-medium"
+                          >
+                            {t("auth.city")}{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="p-city"
+                            placeholder={
+                              lang === "hi" ? "जैसे: मुंबई" : "e.g. Mumbai"
+                            }
+                            value={profileData.city}
+                            onChange={(e) =>
+                              handleProfileChange("city", e.target.value)
+                            }
+                            className={
+                              profileErrors.city ? "border-destructive" : ""
+                            }
+                            data-ocid="auth-city-input"
+                          />
+                          <FieldError msg={profileErrors.city} />
+                        </div>
+                      </div>
+
+                      {/* Role selection */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">
+                          {lang === "hi" ? "आप क्या हैं?" : "I am a..."}
+                          <span className="text-destructive ml-1">*</span>
+                        </Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {(
+                            [
+                              {
+                                value: "seeker" as RoleChoice,
+                                Icon: User,
+                                titleEn: "Service Seeker",
+                                titleHi: "सेवा खोजने वाला",
+                                descEn:
+                                  "I need to find and hire service providers",
+                                descHi: "मुझे सेवाएं खोजनी और लेनी हैं",
+                              },
+                              {
+                                value: "provider" as RoleChoice,
+                                Icon: Wrench,
+                                titleEn: "Service Provider",
+                                titleHi: "सेवा प्रदाता",
+                                descEn: "I offer services and want clients",
+                                descHi: "मैं सेवाएं देता/देती हूं",
+                              },
+                            ] as const
+                          ).map(
+                            ({
+                              value,
+                              Icon,
+                              titleEn,
+                              titleHi,
+                              descEn,
+                              descHi,
+                            }) => (
+                              <button
+                                key={value}
+                                type="button"
+                                onClick={() =>
+                                  handleProfileChange("role", value)
+                                }
+                                data-ocid={`auth-role-${value}`}
+                                className={`p-4 rounded-xl border-2 text-left transition-smooth focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                                   profileData.role === value
                                     ? value === "seeker"
-                                      ? "bg-primary/15 text-primary"
-                                      : "bg-secondary/15 text-secondary"
-                                    : "bg-muted text-muted-foreground"
+                                      ? "border-primary bg-primary/5"
+                                      : "border-secondary bg-secondary/5"
+                                    : "border-border hover:border-muted-foreground/40"
                                 }`}
                               >
-                                <Icon className="w-5 h-5" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-foreground">
-                                  {lang === "hi" ? titleHi : titleEn}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                                  {lang === "hi" ? descHi : descEn}
-                                </p>
-                              </div>
-                            </div>
-                          </button>
-                        ),
-                      )}
+                                <div className="flex items-start gap-3">
+                                  <div
+                                    className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                                      profileData.role === value
+                                        ? value === "seeker"
+                                          ? "bg-primary/15 text-primary"
+                                          : "bg-secondary/15 text-secondary"
+                                        : "bg-muted text-muted-foreground"
+                                    }`}
+                                  >
+                                    <Icon className="w-5 h-5" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {lang === "hi" ? titleHi : titleEn}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                      {lang === "hi" ? descHi : descEn}
+                                    </p>
+                                  </div>
+                                </div>
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className="w-full mt-2"
+                        disabled={registerUser.isPending}
+                        data-ocid="auth-profile-submit"
+                      >
+                        {registerUser.isPending
+                          ? lang === "hi"
+                            ? "सहेजा जा रहा है..."
+                            : "Saving..."
+                          : profileData.role === "provider"
+                            ? lang === "hi"
+                              ? "आगे बढ़ें →"
+                              : "Continue →"
+                            : t("auth.submit")}
+                      </Button>
+                    </form>
+                  </div>
+                )}
+
+                {/* ── Provider-details step ─────────────────────────────────── */}
+                {step === "provider-details" && (
+                  <div>
+                    <StepIndicator step={step} />
+                    <div className="flex items-center gap-2 justify-center mb-1">
+                      <Building2 className="w-5 h-5 text-secondary" />
+                      <h1 className="text-xl font-display font-bold text-foreground">
+                        {lang === "hi" ? "व्यापार विवरण" : "Business Details"}
+                      </h1>
                     </div>
-                  </div>
+                    <p className="text-sm text-muted-foreground text-center mb-6">
+                      {lang === "hi"
+                        ? "अपने व्यापार की जानकारी भरें"
+                        : "Tell clients about your business"}
+                    </p>
 
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="w-full mt-2"
-                    disabled={registerUser.isPending}
-                    data-ocid="auth-profile-submit"
-                  >
-                    {registerUser.isPending
-                      ? lang === "hi"
-                        ? "सहेजा जा रहा है..."
-                        : "Saving..."
-                      : profileData.role === "provider"
-                        ? lang === "hi"
-                          ? "आगे बढ़ें →"
-                          : "Continue →"
-                        : t("auth.submit")}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ── Provider-details step ─────────────────────────────────────────── */}
-          {step === "provider-details" && (
-            <Card className="border-2 border-secondary/40 shadow-elevated overflow-hidden">
-              <TricolorBar />
-              <CardHeader className="pt-6 pb-2">
-                <StepIndicator step={step} />
-                <div className="flex items-center gap-2 justify-center mt-1">
-                  <Building2 className="w-5 h-5 text-secondary" />
-                  <h1 className="text-xl font-display font-bold text-foreground">
-                    {lang === "hi" ? "व्यापार विवरण" : "Business Details"}
-                  </h1>
-                </div>
-                <p className="text-sm text-muted-foreground text-center">
-                  {lang === "hi"
-                    ? "अपने व्यापार की जानकारी भरें"
-                    : "Tell clients about your business"}
-                </p>
-              </CardHeader>
-
-              <CardContent className="pb-8">
-                <form
-                  onSubmit={handleProviderSubmit}
-                  noValidate
-                  className="space-y-4"
-                >
-                  <div className="space-y-1.5">
-                    <Label
-                      htmlFor="prov-business"
-                      className="text-sm font-medium"
+                    <form
+                      onSubmit={handleProviderSubmit}
+                      noValidate
+                      className="space-y-4"
                     >
-                      {lang === "hi" ? "व्यापार का नाम" : "Business Name"}
-                      <span className="text-destructive ml-1">*</span>
-                    </Label>
-                    <Input
-                      id="prov-business"
-                      placeholder={
-                        lang === "hi"
-                          ? "जैसे: शर्मा इलेक्ट्रिकल्स"
-                          : "e.g. Sharma Electricals"
-                      }
-                      value={providerData.businessName}
-                      onChange={(e) =>
-                        handleProviderChange("businessName", e.target.value)
-                      }
-                      className={
-                        providerErrors.businessName ? "border-destructive" : ""
-                      }
-                      data-ocid="auth-business-name-input"
-                    />
-                    <FieldError msg={providerErrors.businessName} />
-                  </div>
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="prov-business"
+                          className="text-sm font-medium"
+                        >
+                          {lang === "hi" ? "व्यापार का नाम" : "Business Name"}
+                          <span className="text-destructive ml-1">*</span>
+                        </Label>
+                        <Input
+                          id="prov-business"
+                          placeholder={
+                            lang === "hi"
+                              ? "जैसे: शर्मा इलेक्ट्रिकल्स"
+                              : "e.g. Sharma Electricals"
+                          }
+                          value={providerData.businessName}
+                          onChange={(e) =>
+                            handleProviderChange("businessName", e.target.value)
+                          }
+                          className={
+                            providerErrors.businessName
+                              ? "border-destructive"
+                              : ""
+                          }
+                          data-ocid="auth-business-name-input"
+                        />
+                        <FieldError msg={providerErrors.businessName} />
+                      </div>
 
-                  <div className="space-y-1.5">
-                    <Label
-                      htmlFor="prov-services"
-                      className="text-sm font-medium"
-                    >
-                      {lang === "hi" ? "दी जाने वाली सेवाएं" : "Services Offered"}
-                      <span className="text-destructive ml-1">*</span>
-                    </Label>
-                    <Textarea
-                      id="prov-services"
-                      rows={3}
-                      placeholder={
-                        lang === "hi"
-                          ? "हर सेवा एक नई लाइन में:\nइलेक्ट्रिकल वायरिंग\nफैन इंस्टालेशन"
-                          : "One service per line:\nElectrical wiring\nFan installation\nSwitch repair"
-                      }
-                      value={providerData.servicesOffered}
-                      onChange={(e) =>
-                        handleProviderChange("servicesOffered", e.target.value)
-                      }
-                      className={
-                        providerErrors.servicesOffered
-                          ? "border-destructive"
-                          : ""
-                      }
-                      data-ocid="auth-services-offered-input"
-                    />
-                    <FieldError msg={providerErrors.servicesOffered} />
-                  </div>
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="prov-services"
+                          className="text-sm font-medium"
+                        >
+                          {lang === "hi"
+                            ? "दी जाने वाली सेवाएं"
+                            : "Services Offered"}
+                          <span className="text-destructive ml-1">*</span>
+                        </Label>
+                        <Textarea
+                          id="prov-services"
+                          rows={3}
+                          placeholder={
+                            lang === "hi"
+                              ? "हर सेवा एक नई लाइन में:\nइलेक्ट्रिकल वायरिंग\nफैन इंस्टालेशन"
+                              : "One service per line:\nElectrical wiring\nFan installation\nSwitch repair"
+                          }
+                          value={providerData.servicesOffered}
+                          onChange={(e) =>
+                            handleProviderChange(
+                              "servicesOffered",
+                              e.target.value,
+                            )
+                          }
+                          className={
+                            providerErrors.servicesOffered
+                              ? "border-destructive"
+                              : ""
+                          }
+                          data-ocid="auth-services-offered-input"
+                        />
+                        <FieldError msg={providerErrors.servicesOffered} />
+                      </div>
 
-                  <div className="space-y-1.5">
-                    <Label
-                      htmlFor="prov-bio-en"
-                      className="text-sm font-medium"
-                    >
-                      {lang === "hi" ? "परिचय (अंग्रेजी)" : "Bio (English)"}
-                      <span className="text-destructive ml-1">*</span>
-                    </Label>
-                    <Textarea
-                      id="prov-bio-en"
-                      rows={3}
-                      placeholder="Describe your experience and expertise in English..."
-                      value={providerData.bioEn}
-                      onChange={(e) =>
-                        handleProviderChange("bioEn", e.target.value)
-                      }
-                      className={
-                        providerErrors.bioEn ? "border-destructive" : ""
-                      }
-                      data-ocid="auth-bio-en-input"
-                    />
-                    <FieldError msg={providerErrors.bioEn} />
-                  </div>
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="prov-bio-en"
+                          className="text-sm font-medium"
+                        >
+                          {lang === "hi" ? "परिचय (अंग्रेजी)" : "Bio (English)"}
+                          <span className="text-destructive ml-1">*</span>
+                        </Label>
+                        <Textarea
+                          id="prov-bio-en"
+                          rows={3}
+                          placeholder="Describe your experience and expertise in English..."
+                          value={providerData.bioEn}
+                          onChange={(e) =>
+                            handleProviderChange("bioEn", e.target.value)
+                          }
+                          className={
+                            providerErrors.bioEn ? "border-destructive" : ""
+                          }
+                          data-ocid="auth-bio-en-input"
+                        />
+                        <FieldError msg={providerErrors.bioEn} />
+                      </div>
 
-                  <div className="space-y-1.5">
-                    <Label
-                      htmlFor="prov-bio-hi"
-                      className="text-sm font-medium"
-                    >
-                      {lang === "hi" ? "परिचय (हिंदी)" : "Bio (Hindi)"}
-                      <span className="text-muted-foreground ml-1 text-xs">
-                        ({lang === "hi" ? "वैकल्पिक" : "optional"})
-                      </span>
-                    </Label>
-                    <Textarea
-                      id="prov-bio-hi"
-                      rows={2}
-                      placeholder="हिंदी में अपना परिचय लिखें..."
-                      value={providerData.bioHi}
-                      onChange={(e) =>
-                        handleProviderChange("bioHi", e.target.value)
-                      }
-                      data-ocid="auth-bio-hi-input"
-                    />
-                  </div>
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="prov-bio-hi"
+                          className="text-sm font-medium"
+                        >
+                          {lang === "hi" ? "परिचय (हिंदी)" : "Bio (Hindi)"}
+                          <span className="text-muted-foreground ml-1 text-xs">
+                            ({lang === "hi" ? "वैकल्पिक" : "optional"})
+                          </span>
+                        </Label>
+                        <Textarea
+                          id="prov-bio-hi"
+                          rows={2}
+                          placeholder="हिंदी में अपना परिचय लिखें..."
+                          value={providerData.bioHi}
+                          onChange={(e) =>
+                            handleProviderChange("bioHi", e.target.value)
+                          }
+                          data-ocid="auth-bio-hi-input"
+                        />
+                      </div>
 
-                  <div className="flex gap-3 pt-2">
+                      <div className="flex gap-3 pt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setStep("profile")}
+                          data-ocid="auth-provider-back"
+                        >
+                          {t("common.back")}
+                        </Button>
+                        <Button
+                          type="submit"
+                          className="flex-[2]"
+                          disabled={createProvider.isPending}
+                          data-ocid="auth-provider-submit"
+                        >
+                          {createProvider.isPending
+                            ? lang === "hi"
+                              ? "बन रहा है..."
+                              : "Creating..."
+                            : lang === "hi"
+                              ? "प्रोफाइल बनाएं"
+                              : "Create Profile"}
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* ── Done step ────────────────────────────────────────────────── */}
+                {step === "done" && (
+                  <div className="text-center space-y-6 py-4">
+                    <div className="w-20 h-20 mx-auto rounded-full bg-secondary/15 flex items-center justify-center">
+                      <CheckCircle2 className="w-10 h-10 text-secondary" />
+                    </div>
+                    <div className="space-y-2">
+                      <h2 className="text-2xl font-display font-bold text-foreground">
+                        {lang === "hi" ? "सफलतापूर्वक पंजीकृत!" : "You're all set!"}
+                      </h2>
+                      <p className="text-muted-foreground text-sm">
+                        {lang === "hi"
+                          ? "आपका खाता बन गया है। अब आप पूरे भारत में सेवाएं खोज सकते हैं।"
+                          : "Your account is ready. Explore trusted services across India."}
+                      </p>
+                    </div>
                     <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setStep("profile")}
-                      data-ocid="auth-provider-back"
+                      size="lg"
+                      className="w-full"
+                      onClick={() => navigate({ to: "/dashboard" })}
+                      data-ocid="auth-done-dashboard"
                     >
-                      {t("common.back")}
+                      {lang === "hi" ? "डैशबोर्ड पर जाएं" : "Go to Dashboard"}
+                      <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                     <Button
-                      type="submit"
-                      className="flex-[2]"
-                      disabled={createProvider.isPending}
-                      data-ocid="auth-provider-submit"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() =>
+                        navigate({
+                          to: "/services",
+                          search: {
+                            category: undefined,
+                            state: undefined,
+                            city: undefined,
+                            search: undefined,
+                            sort: undefined,
+                          },
+                        })
+                      }
+                      data-ocid="auth-done-explore"
                     >
-                      {createProvider.isPending
-                        ? lang === "hi"
-                          ? "बन रहा है..."
-                          : "Creating..."
-                        : lang === "hi"
-                          ? "प्रोफाइल बनाएं"
-                          : "Create Profile"}
+                      {lang === "hi" ? "सेवाएं देखें" : "Browse Services"}
                     </Button>
                   </div>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ── Done step ─────────────────────────────────────────────────────── */}
-          {step === "done" && (
-            <Card className="border-2 border-secondary/40 shadow-elevated overflow-hidden text-center">
-              <TricolorBar />
-              <CardContent className="py-12 px-8 space-y-6">
-                <div className="w-20 h-20 mx-auto rounded-full bg-secondary/15 flex items-center justify-center">
-                  <CheckCircle2 className="w-10 h-10 text-secondary" />
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-display font-bold text-foreground">
-                    {lang === "hi" ? "सफलतापूर्वक पंजीकृत!" : "You're all set!"}
-                  </h2>
-                  <p className="text-muted-foreground text-sm">
-                    {lang === "hi"
-                      ? "आपका खाता बन गया है। अब आप पूरे भारत में सेवाएं खोज सकते हैं।"
-                      : "Your account is ready. Explore trusted services across India."}
-                  </p>
-                </div>
-                <Button
-                  size="lg"
-                  className="w-full"
-                  onClick={() => navigate({ to: "/dashboard" })}
-                  data-ocid="auth-done-dashboard"
-                >
-                  {lang === "hi" ? "डैशबोर्ड पर जाएं" : "Go to Dashboard"}
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() =>
-                    navigate({
-                      to: "/services",
-                      search: {
-                        category: undefined,
-                        state: undefined,
-                        city: undefined,
-                        search: undefined,
-                        sort: undefined,
-                      },
-                    })
-                  }
-                  data-ocid="auth-done-explore"
-                >
-                  {lang === "hi" ? "सेवाएं देखें" : "Browse Services"}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </motion.div>
-      </AnimatePresence>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

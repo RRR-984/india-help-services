@@ -5,14 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
   BadgeCheck,
   ChevronLeft,
   ChevronRight,
   Clock,
+  Download,
   Home,
   IndianRupee,
   Mail,
@@ -23,22 +25,35 @@ import {
   Smartphone,
   Star,
   User2,
+  Video,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ErrorMessage, LoadingSpinner } from "../components/ui/LoadingSpinner";
 import StarRating from "../components/ui/StarRating";
 import {
   useAddReview,
   useCategories,
+  useCheckContactAvailable,
   useProvider,
+  useProviderClassVideos,
   useReviewsByProvider,
   useSubmitInquiry,
 } from "../hooks/use-api";
 import { useAuth } from "../hooks/use-auth";
 import { useLanguage } from "../hooks/use-language";
-import type { InquiryInput, ReviewInput } from "../types";
+import {
+  CLASS_SUBCATEGORIES,
+  formatVideoDate,
+  getSubCategoryIcon,
+  getSubCategoryLabel,
+} from "../services/backend-api";
+import type {
+  ClassSubCategory,
+  ClassVideo,
+  InquiryInput,
+  ReviewInput,
+} from "../types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -70,20 +85,361 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.4, delay },
 });
 
+// ─── Sub-category badge colours ───────────────────────────────────────────────
+
+const SUB_CAT_COLORS: Record<ClassSubCategory, string> = {
+  yoga: "bg-purple-100 text-purple-700 border-purple-300",
+  dhyan: "bg-violet-100 text-violet-700 border-violet-300",
+  fitness: "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-300",
+  coaching: "bg-indigo-100 text-indigo-700 border-indigo-300",
+};
+
+// ─── Video download helper (object-storage _downloadFile binding) ─────────────
+
+function triggerVideoDownload(fileKey: string, title: string) {
+  try {
+    // Object-storage binding: _downloadFile is injected globally at runtime
+    const global = window as unknown as Record<
+      string,
+      (key: string, filename: string) => void
+    >;
+    if (typeof global._downloadFile === "function") {
+      global._downloadFile(fileKey, `${title}.mp4`);
+    } else {
+      // Fallback: open file key as a direct URL (works when object-storage serves via URL)
+      const url = fileKey.startsWith("http")
+        ? fileKey
+        : `/api/storage/${fileKey}`;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${title}.mp4`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  } catch {
+    toast.error("Download failed. Please try again.");
+  }
+}
+
+// ─── Classes Tab ──────────────────────────────────────────────────────────────
+
+interface ClassesTabProps {
+  providerId: string;
+  lang: "en" | "hi";
+}
+
+function ClassesTab({ providerId, lang }: ClassesTabProps) {
+  const { data: allVideos = [], isLoading } =
+    useProviderClassVideos(providerId);
+  const [activeFilter, setActiveFilter] = useState<ClassSubCategory | "all">(
+    "all",
+  );
+
+  const activeVideos = allVideos.filter((v) => v.isActive);
+  const filtered =
+    activeFilter === "all"
+      ? activeVideos
+      : activeVideos.filter((v) => v.subCategory === activeFilter);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-4 space-y-2">
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (activeVideos.length === 0) {
+    return (
+      <Card>
+        <CardContent
+          className="py-14 text-center space-y-3"
+          data-ocid="classes-empty"
+        >
+          <div className="text-5xl opacity-50">🎬</div>
+          <p className="text-muted-foreground text-sm font-medium">
+            {lang === "hi"
+              ? "अभी तक कोई क्लास वीडियो नहीं है"
+              : "No class videos uploaded yet"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {lang === "hi"
+              ? "इस प्रदाता ने अभी तक कोई वीडियो प्रकाशित नहीं किया है"
+              : "This provider hasn't published any videos yet"}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Purple section header */}
+      <div className="flex items-center gap-2 pb-1">
+        <div className="h-5 w-1 rounded-full bg-purple-500" />
+        <h3 className="font-semibold text-foreground text-sm">
+          {lang === "hi" ? "ऑनलाइन क्लासेस" : "Online Classes"}{" "}
+          <span className="text-muted-foreground font-normal">
+            ({activeVideos.length})
+          </span>
+        </h3>
+      </div>
+
+      {/* Sub-category filter chips */}
+      <fieldset
+        className="flex flex-wrap gap-2 border-0 p-0 m-0"
+        aria-label={lang === "hi" ? "श्रेणी फ़िल्टर" : "Category filter"}
+        data-ocid="classes-filter"
+      >
+        <button
+          type="button"
+          onClick={() => setActiveFilter("all")}
+          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+            activeFilter === "all"
+              ? "bg-purple-600 text-white border-purple-600"
+              : "border-purple-300 text-purple-700 hover:bg-purple-50"
+          }`}
+          data-ocid="filter-all"
+        >
+          {lang === "hi" ? "सभी" : "All"}
+        </button>
+        {CLASS_SUBCATEGORIES.map((cat) => (
+          <button
+            type="button"
+            key={cat.value}
+            onClick={() => setActiveFilter(cat.value)}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              activeFilter === cat.value
+                ? "bg-purple-600 text-white border-purple-600"
+                : "border-purple-300 text-purple-700 hover:bg-purple-50"
+            }`}
+            data-ocid={`filter-${cat.value}`}
+          >
+            {cat.icon} {lang === "hi" ? cat.labelHi : cat.labelEn}
+          </button>
+        ))}
+      </fieldset>
+
+      {/* Video grid */}
+      {filtered.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <p className="text-muted-foreground text-sm">
+              {lang === "hi"
+                ? "इस श्रेणी में कोई वीडियो नहीं है"
+                : "No videos in this category"}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+          data-ocid="classes-grid"
+        >
+          {filtered.map((video, idx) => (
+            <VideoCard
+              key={video.id.toString()}
+              video={video}
+              lang={lang}
+              index={idx}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Video Card ───────────────────────────────────────────────────────────────
+
+interface VideoCardProps {
+  video: ClassVideo;
+  lang: "en" | "hi";
+  index: number;
+}
+
+function VideoCard({ video, lang, index }: VideoCardProps) {
+  const subCatLabel = getSubCategoryLabel(video.subCategory, lang);
+  const subCatIcon = getSubCategoryIcon(video.subCategory);
+  const uploadDate = formatVideoDate(video.uploadedAt);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.07 }}
+    >
+      <Card className="hover:shadow-md transition-shadow overflow-hidden border-purple-100 h-full flex flex-col">
+        {/* Purple top accent */}
+        <div className="h-1 w-full bg-gradient-to-r from-purple-500 to-violet-500" />
+
+        {/* Video preview placeholder */}
+        <div className="relative bg-gradient-to-br from-purple-50 to-violet-100 h-36 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-full bg-purple-600/90 flex items-center justify-center shadow-lg">
+            <Video size={20} className="text-white" />
+          </div>
+          {/* Sub-category badge overlay */}
+          <div className="absolute bottom-2 left-2">
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                SUB_CAT_COLORS[video.subCategory]
+              }`}
+            >
+              {subCatIcon} {subCatLabel}
+            </span>
+          </div>
+        </div>
+
+        <CardContent className="p-3 flex flex-col flex-1 space-y-2">
+          {/* Title */}
+          <h4 className="font-semibold text-foreground text-sm leading-snug line-clamp-2">
+            {video.title}
+          </h4>
+
+          {/* Description */}
+          {video.description && (
+            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 flex-1">
+              {video.description}
+            </p>
+          )}
+
+          {/* Upload date */}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock size={11} className="shrink-0 text-purple-400" />
+            <span>
+              {lang === "hi" ? "अपलोड:" : "Uploaded:"} {uploadDate}
+            </span>
+          </div>
+
+          {/* Download button */}
+          <Button
+            size="sm"
+            className="w-full mt-auto gap-1.5 bg-purple-600 hover:bg-purple-700 text-white border-0"
+            onClick={() => triggerVideoDownload(video.fileKey, video.title)}
+            data-ocid={`download-video-${video.id.toString()}`}
+            aria-label={`${lang === "hi" ? "डाउनलोड करें" : "Download"}: ${video.title}`}
+          >
+            <Download size={13} />
+            {lang === "hi" ? "डाउनलोड करें" : "Download Video"}
+          </Button>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function ProviderDetailSkeleton() {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="bg-card border-b border-border h-12" />
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Hero card skeleton */}
+        <Card className="overflow-hidden shadow-md">
+          <div className="h-1.5 w-full bg-gradient-to-r from-[#FF9933] via-white to-[#138808]" />
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row gap-6">
+              <Skeleton className="h-24 w-24 rounded-2xl shrink-0" />
+              <div className="flex-1 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-8 w-56" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <Skeleton className="h-16 w-20 rounded-xl" />
+                </div>
+                <div className="flex gap-4">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Content skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <Skeleton className="h-10 w-full rounded-lg" />
+            <Card>
+              <CardContent className="p-6 space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="space-y-4">
+            <Card>
+              <CardContent className="p-6 space-y-3">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-4/5" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <Skeleton className="h-9 w-full rounded-md" />
+                <Skeleton className="h-9 w-full rounded-md" />
+                <Skeleton className="h-9 w-full rounded-md" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function ProviderDetailPage() {
   const { providerId } = useParams({ from: "/services/$providerId" });
   const { t, lang } = useLanguage();
   const { isAuthenticated, user, login } = useAuth();
+  const navigate = useNavigate();
 
   const id = BigInt(providerId);
   const { data: provider, isLoading, isError, refetch } = useProvider(id);
   const { data: categories } = useCategories();
   const { data: reviews } = useReviewsByProvider(id);
 
+  // Fetch class videos early to conditionally show the Classes tab
+  const { data: classVideos = [] } = useProviderClassVideos(providerId);
+  const hasActiveVideos = classVideos.some((v) => v.isActive);
+
   const submitInquiry = useSubmitInquiry();
   const addReview = useAddReview();
+
+  // Compute current IST time as HH:MM for availability check
+  const currentISTTime = new Date().toLocaleTimeString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const { data: contactAvailable } = useCheckContactAvailable(
+    id,
+    currentISTTime,
+  );
 
   const [inquiryForm, setInquiryForm] = useState<
     Omit<InquiryInput, "providerId">
@@ -95,14 +451,73 @@ export default function ProviderDetailPage() {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
 
-  // ── Loading / error states ────────────────────────────────────────────────
-  if (isLoading) return <LoadingSpinner fullPage />;
-  if (isError || !provider)
+  // Auto-redirect if provider not found after loading
+  useEffect(() => {
+    if (!isLoading && !isError && provider === null) {
+      const timer = setTimeout(() => {
+        navigate({
+          to: "/services",
+          search: {
+            category: undefined,
+            state: undefined,
+            city: undefined,
+            search: undefined,
+            sort: undefined,
+          },
+        });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, isError, provider, navigate]);
+
+  // ── Loading state ─────────────────────────────────────────────────────────
+  if (isLoading) return <ProviderDetailSkeleton />;
+
+  // ── Not found state ───────────────────────────────────────────────────────
+  if (isError || provider === null || provider === undefined) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16">
-        <ErrorMessage onRetry={refetch} />
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-md space-y-5"
+        >
+          <div className="text-7xl">🔍</div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-display font-bold text-foreground">
+              {t("provider.notFound")}
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              {lang === "hi"
+                ? "यह प्रदाता मौजूद नहीं है या हटा दिया गया है। कुछ सेकंड में वापस जाया जाएगा।"
+                : "This provider does not exist or has been removed. Redirecting shortly…"}
+            </p>
+          </div>
+          <div className="flex gap-3 justify-center">
+            <Link
+              to="/services"
+              search={{
+                category: undefined,
+                state: undefined,
+                city: undefined,
+                search: undefined,
+                sort: undefined,
+              }}
+            >
+              <Button data-ocid="not-found-back">
+                {lang === "hi" ? "सेवाएं देखें" : "Browse Services"}
+              </Button>
+            </Link>
+            {isError && (
+              <Button variant="outline" onClick={() => refetch()}>
+                {t("common.retry")}
+              </Button>
+            )}
+          </div>
+        </motion.div>
       </div>
     );
+  }
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const initials = provider.businessName
@@ -111,8 +526,6 @@ export default function ProviderDetailPage() {
     .map((w: string) => w[0])
     .join("")
     .toUpperCase();
-
-  const bio = lang === "hi" ? provider.bioHi : provider.bioEn;
 
   const providerCategories = categories?.filter((c) =>
     provider.categoryIds.includes(c.id),
@@ -129,6 +542,15 @@ export default function ProviderDetailPage() {
     reviews?.some((r) => r.seekerId.toString() === user.id.toString());
 
   const isSeeker = user?.role === "seeker" || !user;
+
+  // Contact visibility: hide phone/WhatsApp when availability is enabled AND currently unavailable
+  const availabilityEnabled = provider.contactAvailabilityEnabled === true;
+  const showContact = !availabilityEnabled || contactAvailable === true;
+  const availFromStr = provider.availableFrom ?? "";
+  const availToStr = provider.availableTo ?? "";
+
+  // Tab count for classes badge
+  const activeVideoCount = classVideos.filter((v) => v.isActive).length;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleInquirySubmit = async (e: React.FormEvent) => {
@@ -230,10 +652,10 @@ export default function ProviderDetailPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* ── Provider header card ─────────────────────────────────────────── */}
+        {/* ── Provider hero card ─────────────────────────────────────────── */}
         <motion.div {...fadeUp(0)}>
           <Card className="overflow-hidden shadow-md">
-            {/* tricolor accent strip */}
+            {/* Tricolor accent strip */}
             <div className="h-1.5 w-full bg-gradient-to-r from-[#FF9933] via-white to-[#138808]" />
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-6">
@@ -254,7 +676,7 @@ export default function ProviderDetailPage() {
                 <div className="flex-1 min-w-0 space-y-3">
                   {/* Name row */}
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground leading-tight">
                           {provider.businessName}
@@ -263,6 +685,14 @@ export default function ProviderDetailPage() {
                           <Badge className="gap-1 bg-secondary/15 text-secondary border border-secondary/30 shrink-0">
                             <BadgeCheck size={12} />
                             {t("services.verified")}
+                          </Badge>
+                        )}
+                        {hasActiveVideos && (
+                          <Badge className="gap-1 bg-purple-100 text-purple-700 border border-purple-300 shrink-0 text-[10px]">
+                            <Video size={10} />
+                            {lang === "hi"
+                              ? "क्लासेस उपलब्ध"
+                              : "Classes Available"}
                           </Badge>
                         )}
                       </div>
@@ -274,7 +704,7 @@ export default function ProviderDetailPage() {
 
                     {/* Rating badge */}
                     <div
-                      className="flex flex-col items-center bg-muted/60 rounded-xl px-4 py-2 border border-border"
+                      className="flex flex-col items-center bg-muted/60 rounded-xl px-4 py-2 border border-border shrink-0"
                       data-ocid="provider-rating"
                     >
                       <div className="flex items-center gap-1">
@@ -289,23 +719,25 @@ export default function ProviderDetailPage() {
                     </div>
                   </div>
 
-                  {/* Location row */}
-                  <div className="flex flex-wrap gap-4">
+                  {/* Location + contact row */}
+                  <div className="flex flex-wrap gap-x-5 gap-y-2">
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                       <MapPin size={14} className="text-primary shrink-0" />
                       <span>
                         {provider.city}, {provider.state}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Phone size={14} className="text-secondary shrink-0" />
-                      <a
-                        href={`tel:${provider.phone}`}
-                        className="hover:text-foreground transition-colors"
-                      >
-                        {provider.phone}
-                      </a>
-                    </div>
+                    {showContact && (
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Phone size={14} className="text-secondary shrink-0" />
+                        <a
+                          href={`tel:${provider.phone}`}
+                          className="hover:text-foreground transition-colors"
+                        >
+                          {provider.phone}
+                        </a>
+                      </div>
+                    )}
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                       <Mail size={14} className="text-primary shrink-0" />
                       <a
@@ -332,6 +764,46 @@ export default function ProviderDetailPage() {
                       ))}
                     </div>
                   )}
+
+                  {/* CTA row */}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        document.getElementById("inquire-tab")?.click()
+                      }
+                      data-ocid="cta-contact-provider"
+                    >
+                      <MessageSquare size={14} className="mr-1.5" />
+                      {lang === "hi" ? "संपर्क करें" : "Contact Provider"}
+                    </Button>
+                    {showContact && (
+                      <a href={`tel:${provider.phone}`}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          data-ocid="cta-call-header"
+                        >
+                          <Phone size={14} className="mr-1.5" />
+                          {lang === "hi" ? "कॉल करें" : "Call Now"}
+                        </Button>
+                      </a>
+                    )}
+                    {hasActiveVideos && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                        onClick={() =>
+                          document.getElementById("classes-tab")?.click()
+                        }
+                        data-ocid="cta-view-classes"
+                      >
+                        <Video size={14} className="mr-1.5" />
+                        {lang === "hi" ? "क्लासेस देखें" : "View Classes"}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -343,13 +815,28 @@ export default function ProviderDetailPage() {
           {/* ── Main content (tabs) ──────────────────────────────────────── */}
           <motion.div {...fadeUp(0.1)} className="lg:col-span-2 space-y-0">
             <Tabs defaultValue="about">
-              <TabsList className="w-full grid grid-cols-4 mb-6">
+              <TabsList
+                className={`w-full grid mb-6 ${hasActiveVideos ? "grid-cols-5" : "grid-cols-4"}`}
+              >
                 <TabsTrigger value="about" data-ocid="tab-about">
                   {t("provider.about")}
                 </TabsTrigger>
                 <TabsTrigger value="services" data-ocid="tab-services">
                   {t("provider.services")}
                 </TabsTrigger>
+                {hasActiveVideos && (
+                  <TabsTrigger
+                    value="classes"
+                    id="classes-tab"
+                    data-ocid="tab-classes"
+                    className="data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+                  >
+                    {lang === "hi" ? "क्लासेस" : "Classes"}
+                    <span className="ml-1.5 bg-purple-100 text-purple-700 rounded-full text-[10px] px-1.5 py-0.5 font-semibold data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+                      {activeVideoCount}
+                    </span>
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="reviews" data-ocid="tab-reviews">
                   {t("provider.reviews")}
                   {reviews && reviews.length > 0 && (
@@ -358,26 +845,50 @@ export default function ProviderDetailPage() {
                     </span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="inquire" data-ocid="tab-inquire">
+                <TabsTrigger
+                  value="inquire"
+                  id="inquire-tab"
+                  data-ocid="tab-inquire"
+                >
                   {t("provider.inquire")}
                 </TabsTrigger>
               </TabsList>
 
               {/* ── About ───────────────────────────────────────────────── */}
               <TabsContent value="about" className="space-y-4">
+                {/* English bio */}
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <User2 size={16} className="text-primary" />
-                      {lang === "hi" ? "हमारे बारे में" : "About Us"}
+                      <span>About Us</span>
+                      <span className="text-muted-foreground font-normal text-sm">
+                        — परिचय
+                      </span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    {bio ? (
-                      <p className="text-foreground leading-relaxed text-sm">
-                        {bio}
-                      </p>
-                    ) : (
+                  <CardContent className="pt-0 space-y-4">
+                    {provider.bioEn ? (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          English
+                        </p>
+                        <p className="text-foreground leading-relaxed text-sm">
+                          {provider.bioEn}
+                        </p>
+                      </div>
+                    ) : null}
+                    {provider.bioHi ? (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          हिंदी
+                        </p>
+                        <p className="text-foreground leading-relaxed text-sm text-hindi">
+                          {provider.bioHi}
+                        </p>
+                      </div>
+                    ) : null}
+                    {!provider.bioEn && !provider.bioHi && (
                       <p className="text-muted-foreground text-sm italic">
                         {t("common.noData")}
                       </p>
@@ -385,6 +896,7 @@ export default function ProviderDetailPage() {
                   </CardContent>
                 </Card>
 
+                {/* Service areas */}
                 {provider.serviceAreas.length > 0 && (
                   <Card>
                     <CardHeader className="pb-3">
@@ -415,9 +927,12 @@ export default function ProviderDetailPage() {
               <TabsContent value="services">
                 {provider.servicesOffered.length === 0 ? (
                   <Card>
-                    <CardContent className="py-12 text-center">
+                    <CardContent className="py-12 text-center space-y-2">
+                      <div className="text-4xl opacity-40">🛠️</div>
                       <p className="text-muted-foreground text-sm">
-                        {t("common.noData")}
+                        {lang === "hi"
+                          ? "कोई सेवाएं सूचीबद्ध नहीं हैं"
+                          : "No services listed yet"}
                       </p>
                     </CardContent>
                   </Card>
@@ -462,9 +977,16 @@ export default function ProviderDetailPage() {
                 )}
               </TabsContent>
 
+              {/* ── Online Classes ───────────────────────────────────────── */}
+              {hasActiveVideos && (
+                <TabsContent value="classes">
+                  <ClassesTab providerId={providerId} lang={lang} />
+                </TabsContent>
+              )}
+
               {/* ── Reviews ─────────────────────────────────────────────── */}
               <TabsContent value="reviews" className="space-y-4">
-                {/* Write a review — show if logged in seeker and hasn't reviewed */}
+                {/* Write a review */}
                 {isAuthenticated && isSeeker && !hasReviewed && (
                   <Card className="border-primary/20 bg-primary/5">
                     <CardHeader className="pb-3">
@@ -551,7 +1073,7 @@ export default function ProviderDetailPage() {
                       />
                       <p className="text-muted-foreground text-sm">
                         {lang === "hi"
-                          ? "अभी तक कोई समीक्षा नहीं"
+                          ? "अभी तक कोई समीक्षा नहीं। पहले समीक्षा करें!"
                           : "No reviews yet. Be the first to review!"}
                       </p>
                     </CardContent>
@@ -676,7 +1198,7 @@ export default function ProviderDetailPage() {
                           />
                         </div>
 
-                        {/* Preferred contact method — radio group */}
+                        {/* Preferred contact method */}
                         <div>
                           <Label className="text-sm mb-3 block">
                             {t("inquiry.contact")}
@@ -747,6 +1269,28 @@ export default function ProviderDetailPage() {
 
           {/* ── Sidebar: contact details ─────────────────────────────────── */}
           <motion.div {...fadeUp(0.2)} className="space-y-4">
+            {/* Unavailability message — shown when contact is hidden */}
+            {!showContact && (
+              <div
+                className="rounded-xl border border-primary/30 bg-primary/8 px-4 py-3 space-y-1"
+                data-ocid="unavailability-message"
+              >
+                <div className="flex items-center gap-2">
+                  <Clock size={15} className="text-primary shrink-0" />
+                  <p className="text-sm font-semibold text-foreground">
+                    {lang === "hi"
+                      ? "अभी उपलब्ध नहीं हैं"
+                      : "Not available right now"}
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground pl-5">
+                  {lang === "hi"
+                    ? `सेवा प्रदाता ${availFromStr} से ${availToStr} IST तक उपलब्ध हैं`
+                    : `Provider available from ${availFromStr} to ${availToStr} IST`}
+                </p>
+              </div>
+            )}
+
             {/* Contact card */}
             <Card className="shadow-sm">
               <CardHeader className="pb-3">
@@ -756,20 +1300,34 @@ export default function ProviderDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-3">
-                <div className="flex items-start gap-3">
-                  <Phone size={14} className="text-secondary shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">
-                      {lang === "hi" ? "फोन" : "Phone"}
-                    </p>
-                    <a
-                      href={`tel:${provider.phone}`}
-                      className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-                    >
-                      {provider.phone}
-                    </a>
+                {showContact ? (
+                  <div className="flex items-start gap-3">
+                    <Phone
+                      size={14}
+                      className="text-secondary shrink-0 mt-0.5"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">
+                        {lang === "hi" ? "फोन" : "Phone"}
+                      </p>
+                      <a
+                        href={`tel:${provider.phone}`}
+                        className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+                      >
+                        {provider.phone}
+                      </a>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                    <Clock size={13} className="text-primary shrink-0" />
+                    <span>
+                      {lang === "hi"
+                        ? `संपर्क उपलब्ध: ${availFromStr} – ${availToStr} IST`
+                        : `Contact available: ${availFromStr} – ${availToStr} IST`}
+                    </span>
+                  </div>
+                )}
 
                 <Separator />
 
@@ -827,31 +1385,49 @@ export default function ProviderDetailPage() {
             {/* Quick actions */}
             <Card className="shadow-sm">
               <CardContent className="p-4 space-y-2.5">
-                <a href={`tel:${provider.phone}`} className="block">
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2"
-                    data-ocid="cta-call"
+                {showContact ? (
+                  <>
+                    <a href={`tel:${provider.phone}`} className="block">
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2"
+                        data-ocid="cta-call"
+                      >
+                        <Phone size={15} />
+                        {lang === "hi" ? "कॉल करें" : "Call Now"}
+                      </Button>
+                    </a>
+                    <a
+                      href={`https://wa.me/${provider.phone.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block"
+                    >
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 border-secondary/40 text-secondary hover:bg-secondary/10"
+                        data-ocid="cta-whatsapp"
+                      >
+                        <Smartphone size={15} />
+                        WhatsApp
+                      </Button>
+                    </a>
+                  </>
+                ) : (
+                  <div
+                    className="rounded-lg bg-primary/6 border border-primary/20 px-3 py-2.5 text-center space-y-1"
+                    data-ocid="contact-hidden-notice"
                   >
-                    <Phone size={15} />
-                    {lang === "hi" ? "कॉल करें" : "Call Now"}
-                  </Button>
-                </a>
-                <a
-                  href={`https://wa.me/${provider.phone.replace(/\D/g, "")}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block"
-                >
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 border-secondary/40 text-secondary hover:bg-secondary/10"
-                    data-ocid="cta-whatsapp"
-                  >
-                    <Smartphone size={15} />
-                    WhatsApp
-                  </Button>
-                </a>
+                    <p className="text-xs font-semibold text-foreground">
+                      {lang === "hi" ? "अभी उपलब्ध नहीं" : "Not available now"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {lang === "hi"
+                        ? `${availFromStr} – ${availToStr} IST पर वापस आएं`
+                        : `Come back at ${availFromStr} – ${availToStr} IST`}
+                    </p>
+                  </div>
+                )}
                 <a href={`mailto:${provider.email}`} className="block">
                   <Button
                     variant="outline"
@@ -864,6 +1440,39 @@ export default function ProviderDetailPage() {
                 </a>
               </CardContent>
             </Card>
+
+            {/* Classes quick-access card (sidebar) */}
+            {hasActiveVideos && (
+              <Card className="shadow-sm border-purple-200 bg-purple-50/50">
+                <CardContent className="p-4 space-y-2.5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Video size={14} className="text-purple-600 shrink-0" />
+                    <p className="text-sm font-semibold text-purple-800">
+                      {lang === "hi" ? "ऑनलाइन क्लासेस" : "Online Classes"}
+                    </p>
+                    <span className="ml-auto text-xs bg-purple-200 text-purple-700 rounded-full px-2 py-0.5 font-medium">
+                      {activeVideoCount}
+                    </span>
+                  </div>
+                  <p className="text-xs text-purple-700/80">
+                    {lang === "hi"
+                      ? "योग, ध्यान, फिटनेस और कोचिंग वीडियो डाउनलोड करें"
+                      : "Download Yoga, Meditation, Fitness & Coaching videos"}
+                  </p>
+                  <Button
+                    size="sm"
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white border-0 gap-1.5"
+                    onClick={() =>
+                      document.getElementById("classes-tab")?.click()
+                    }
+                    data-ocid="sidebar-view-classes"
+                  >
+                    <Download size={13} />
+                    {lang === "hi" ? "क्लासेस देखें" : "View Classes"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Service areas chip (sidebar) */}
             {provider.serviceAreas.length > 0 && (
